@@ -8,13 +8,13 @@ import os
 
 def send_utn_spoofed_email():
     # CONFIGURACION DE CUENTA REAL
-    gmail_user = "piedrozadaniel@gmail.com"
-    gmail_password = "xuawyofxhwudgrdn"
+    gmail_user = "mail"
+    gmail_password = "contraseña"
     
     # CONFIGURACION DE SUPLANTACION MEJORADA
     display_name = "Rectoria UTN - Departamento Academico"
     spoofed_email = "rectoria@utn.edu.mx"
-    target_email = "ram14xd@outlook.com"
+    target_email = "victima"
     
     # CONFIGURACION DE ARCHIVO ADJUNTO
     attachment_path = "Calendario_Academico_2025_UTN.pdf"
