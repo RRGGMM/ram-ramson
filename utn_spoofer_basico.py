@@ -9,7 +9,7 @@ def send_utn_spoofed_email():
     
     display_name = "UTN Comunicaciones Oficiales"
     spoofed_email = "comunicaciones@utn.edu.mx"
-    target_email = "ram14xd@outlook.com"
+    target_email = "tu victima"
     
     subject = "Actualización del Sistema Académico - UTN"
     
@@ -82,3 +82,4 @@ if __name__ == "__main__":
     print("DEMOSTRACION: Email Spoofing - UTN")
     print("Analisis + Explotacion de vulnerabilidad DMARC")
     send_utn_spoofed_email()
+
